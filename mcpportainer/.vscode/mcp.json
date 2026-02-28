@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "portainer": {
+      "type": "stdio",
+      "command": "/Users/nicolas/Library/CloudStorage/ProtonDrive-serialinsert@proton.me/git/mcp/mcpportainer/.venv/bin/portainer-mcp",
+      "env": {}
+    },
+    "proxmox": {
+      "type": "stdio",
+      "command": "/Users/nicolas/Library/CloudStorage/ProtonDrive-serialinsert@proton.me/git/mcp/mcpproxmox/.venv/bin/proxmox-mcp",
+      "env": {}
+    }
+  }
+}

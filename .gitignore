@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Secrets / local config
+*.env
+.env.*
+~/.config/
+
+# macOS
+.DS_Store
+*.pdf
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Logs
+*.log

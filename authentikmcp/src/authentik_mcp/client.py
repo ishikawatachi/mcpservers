@@ -32,4 +32,24 @@ class AuthentikClient:
         r.raise_for_status()
         return r.json()
 
-    # TODO: add post/patch/delete helpers as tools require them
+    async def post(self, path: str, body: dict) -> dict:
+        url = f"{self._base}/api/v3/{path.lstrip('/')}"
+        headers = {**self._headers, "Content-Type": "application/json"}
+        async with httpx.AsyncClient(verify=self._verify, timeout=self._timeout) as c:
+            r = await c.post(url, headers=headers, json=body)
+        r.raise_for_status()
+        return r.json()
+
+    async def patch(self, path: str, body: dict) -> dict:
+        url = f"{self._base}/api/v3/{path.lstrip('/')}"
+        headers = {**self._headers, "Content-Type": "application/json"}
+        async with httpx.AsyncClient(verify=self._verify, timeout=self._timeout) as c:
+            r = await c.patch(url, headers=headers, json=body)
+        r.raise_for_status()
+        return r.json()
+
+    async def delete(self, path: str) -> None:
+        url = f"{self._base}/api/v3/{path.lstrip('/')}"
+        async with httpx.AsyncClient(verify=self._verify, timeout=self._timeout) as c:
+            r = await c.delete(url, headers=self._headers)
+        r.raise_for_status()

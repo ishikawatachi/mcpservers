@@ -27,6 +27,7 @@ SETTINGS = Settings(
 )
 
 # Shared mock responses for login/logout
+# Login is now POST (to handle special chars in passwords), API calls + logout are GET
 _LOGIN = httpx.Response(200, json={"success": True, "data": {"sid": "test-sid"}})
 _LOGOUT = httpx.Response(200, json={"success": True})
 
@@ -46,7 +47,8 @@ def _dsm_err(code: int) -> dict:
 @respx.mock
 @pytest.mark.asyncio
 async def test_health_check_ok() -> None:
-    respx.get(BASE_URL + "entry.cgi").mock(side_effect=[_LOGIN, _LOGOUT])
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
+    respx.get(BASE_URL + "entry.cgi").mock(return_value=_LOGOUT)
     respx.get(BASE_URL + "query.cgi").mock(
         return_value=httpx.Response(200, json=_dsm_ok({"SYNO.API.Info": {"path": "query.cgi"}}))
     )
@@ -58,7 +60,8 @@ async def test_health_check_ok() -> None:
 @respx.mock
 @pytest.mark.asyncio
 async def test_health_check_unauthorized() -> None:
-    respx.get(BASE_URL + "entry.cgi").mock(side_effect=[_LOGIN, _LOGOUT])
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
+    respx.get(BASE_URL + "entry.cgi").mock(return_value=_LOGOUT)
     respx.get(BASE_URL + "query.cgi").mock(
         return_value=httpx.Response(401)
     )
@@ -72,7 +75,8 @@ async def test_health_check_unauthorized() -> None:
 @pytest.mark.asyncio
 async def test_dsm_application_error() -> None:
     """DSM returns HTTP 200 but success=false."""
-    respx.get(BASE_URL + "entry.cgi").mock(side_effect=[_LOGIN, _LOGOUT])
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
+    respx.get(BASE_URL + "entry.cgi").mock(return_value=_LOGOUT)
     respx.get(BASE_URL + "query.cgi").mock(
         return_value=httpx.Response(200, json=_dsm_err(105))
     )
@@ -91,7 +95,7 @@ async def test_dsm_application_error() -> None:
 @pytest.mark.asyncio
 async def test_login_bad_credentials() -> None:
     """DSM returns success=false on login (wrong password)."""
-    respx.get(BASE_URL + "entry.cgi").mock(
+    respx.post(BASE_URL + "entry.cgi").mock(
         return_value=httpx.Response(200, json={"success": False, "error": {"code": 400}})
     )
     with pytest.raises(SynologyAPIError) as exc_info:
@@ -105,7 +109,7 @@ async def test_login_bad_credentials() -> None:
 @pytest.mark.asyncio
 async def test_login_http_error() -> None:
     """Non-2xx HTTP response from the login endpoint."""
-    respx.get(BASE_URL + "entry.cgi").mock(
+    respx.post(BASE_URL + "entry.cgi").mock(
         return_value=httpx.Response(503)
     )
     with pytest.raises(SynologyAPIError) as exc_info:
@@ -129,8 +133,9 @@ async def test_get_dsm_info() -> None:
         "temperature": 35,
         "sys_temp_warn": False,
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.get_dsm_info()
@@ -151,8 +156,9 @@ async def test_get_system_utilization() -> None:
         "network": [{"device": "eth0", "rx": 1024, "tx": 512}],
         "disk": [{"device": "sda", "read_byte": 2048, "write_byte": 1024}],
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.get_system_utilization()
@@ -177,8 +183,9 @@ async def test_get_storage_info() -> None:
         ],
         "disk": [],
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.get_storage_info()
@@ -198,8 +205,9 @@ async def test_get_disk_info() -> None:
             {"id": "disk2", "model": "WD Red Plus 8TB", "status": "normal", "temp": 37},
         ]
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.get_disk_info()
@@ -221,8 +229,9 @@ async def test_list_shares() -> None:
         ],
         "total": 2,
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.list_shares()
@@ -244,8 +253,9 @@ async def test_list_packages() -> None:
         ],
         "total": 2,
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.list_packages()
@@ -266,8 +276,9 @@ async def test_list_scheduled_tasks() -> None:
         ],
         "total": 1,
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.list_scheduled_tasks()
@@ -288,8 +299,9 @@ async def test_list_docker_containers() -> None:
         ],
         "total": 2,
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.list_docker_containers()
@@ -309,8 +321,9 @@ async def test_list_docker_images() -> None:
         ],
         "total": 1,
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.list_docker_images()
@@ -332,8 +345,9 @@ async def test_list_files() -> None:
         ],
         "total": 2,
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.list_files("/docker")
@@ -352,8 +366,9 @@ async def test_get_security_status() -> None:
         "risk_item_cnt": {"critical": 0, "high": 1, "medium": 3, "low": 2, "info": 5},
         "last_scan_time": "2024-01-15 02:00:00",
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.get_security_status()
@@ -379,8 +394,9 @@ async def test_get_backup_tasks() -> None:
         ],
         "total": 1,
     }
+    respx.post(BASE_URL + "entry.cgi").mock(return_value=_LOGIN)
     respx.get(BASE_URL + "entry.cgi").mock(
-        side_effect=[_LOGIN, httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
+        side_effect=[httpx.Response(200, json=_dsm_ok(payload)), _LOGOUT]
     )
     async with SynologyClient(SETTINGS) as client:
         data = await client.get_backup_tasks()

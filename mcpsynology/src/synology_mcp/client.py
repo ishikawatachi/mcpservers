@@ -143,10 +143,11 @@ class SynologyClient:
             "account": self._settings.username,
             "passwd": self._settings.password,
             "format": "sid",
-            "session": "synology-mcp",
         }
         t0 = time.monotonic()
-        response = await client.get("entry.cgi", params=params)
+        # POST form data — avoids special characters in passwd being mangled
+        # in URL query strings (e.g. '*', '+', '#' break GET-based auth)
+        response = await client.post("entry.cgi", data=params)
         elapsed = round((time.monotonic() - t0) * 1000)
 
         log.info("synology.login", status=response.status_code, elapsed_ms=elapsed)
@@ -265,7 +266,7 @@ class SynologyClient:
 
     async def get_dsm_info(self) -> Any:
         """Return DSM system info: model, firmware version, serial, uptime."""
-        return await self._get("SYNO.DSM.Info", "get")
+        return await self._get("SYNO.DSM.Info", "getinfo")
 
     async def get_system_utilization(self) -> Any:
         """Return current CPU, memory, network, and disk I/O utilization."""
@@ -311,7 +312,7 @@ class SynologyClient:
         """Return all Task Scheduler tasks with last-run status."""
         return await self._get(
             "SYNO.Core.TaskScheduler",
-            "list",
+            "get",
             {"additional": "task_setting,owner,real_owner,last_run_result"},
         )
 

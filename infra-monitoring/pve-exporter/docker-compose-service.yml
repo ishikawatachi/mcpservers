@@ -1,0 +1,19 @@
+# Add this service block to your monitoring stack's docker-compose.yml
+# (merge with existing services: section)
+
+  pve-exporter:
+    image: prompve/prometheus-pve-exporter:latest
+    container_name: pve_exporter
+    restart: unless-stopped
+    # network_mode: host is required on Synology — the prometheus_net bridge
+    # cannot route to LAN hosts (e.g. Proxmox at 8006). Host mode gives the
+    # container the NAS's full physical network stack. Prometheus reaches it
+    # via the prometheus_net gateway: 172.22.0.1:9221
+    network_mode: host
+    command: ["--config.file=/etc/pve.yml"]
+    volumes:
+      - /volume1/docker/grafana/pve.yml:/etc/pve.yml:ro
+    security_opt:
+      - no-new-privileges=true
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"

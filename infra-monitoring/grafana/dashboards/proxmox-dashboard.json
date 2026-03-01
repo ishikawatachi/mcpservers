@@ -1,0 +1,635 @@
+{
+  "uid": "proxmox-bab1-v2",
+  "title": "Proxmox — bab1 Cluster",
+  "description": "Full Proxmox VE monitoring: node health, VMs, LXC containers, storage. Data via prometheus-pve-exporter.",
+  "tags": ["proxmox", "pve", "infrastructure", "mcp"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "node",
+        "label": "Node",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+        "query": "label_values(pve_up{job=\"pve\"}, node)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": false,
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Node Status",
+      "description": "Proxmox node bab1 reachability",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "pve_up{job=\"pve\", id=\"node/$node\"}",
+          "legendFormat": "{{node}}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "gauge",
+      "title": "Node CPU Usage",
+      "gridPos": { "x": 4, "y": 0, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "pve_node_cpu_usage_ratio{job=\"pve\", node=\"$node\"} * 100",
+          "legendFormat": "CPU %",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "gauge",
+      "title": "Node Memory Usage",
+      "gridPos": { "x": 9, "y": 0, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "(1 - pve_node_mem_free_bytes{job=\"pve\", node=\"$node\"} / pve_node_mem_total_bytes{job=\"pve\", node=\"$node\"}) * 100",
+          "legendFormat": "RAM %",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 75 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Node Uptime",
+      "gridPos": { "x": 14, "y": 0, "w": 5, "h": 2 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "pve_uptime{job=\"pve\", id=\"node/$node\"}",
+          "legendFormat": "Uptime",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Running VMs / LXC",
+      "gridPos": { "x": 19, "y": 0, "w": 5, "h": 2 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "count(pve_guest_info{job=\"pve\", node=\"$node\", status=\"running\", type=\"qemu\"})",
+          "legendFormat": "VMs running",
+          "instant": true
+        },
+        {
+          "expr": "count(pve_guest_info{job=\"pve\", node=\"$node\", status=\"running\", type=\"lxc\"})",
+          "legendFormat": "LXC running",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "orientation": "horizontal"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": 0 }]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Node RAM Available",
+      "gridPos": { "x": 14, "y": 2, "w": 5, "h": 2 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "pve_node_mem_free_bytes{job=\"pve\", node=\"$node\"}",
+          "legendFormat": "Free",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Total VMs + LXC",
+      "gridPos": { "x": 19, "y": 2, "w": 5, "h": 2 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "count(pve_guest_info{job=\"pve\", node=\"$node\", type=\"qemu\"})",
+          "legendFormat": "Total VMs",
+          "instant": true
+        },
+        {
+          "expr": "count(pve_guest_info{job=\"pve\", node=\"$node\", type=\"lxc\"})",
+          "legendFormat": "Total LXC",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "none",
+        "orientation": "horizontal"
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Node CPU Usage Over Time",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "pve_node_cpu_usage_ratio{job=\"pve\", node=\"$node\"} * 100",
+          "legendFormat": "CPU %"
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "gradientMode": "opacity"
+          }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Node Memory Usage Over Time",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "pve_node_mem_total_bytes{job=\"pve\", node=\"$node\"} - pve_node_mem_free_bytes{job=\"pve\", node=\"$node\"}",
+          "legendFormat": "Used RAM"
+        },
+        {
+          "expr": "pve_node_mem_total_bytes{job=\"pve\", node=\"$node\"}",
+          "legendFormat": "Total RAM"
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Node Network I/O",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "irate(pve_network_transmit_bytes{job=\"pve\", id=\"node/$node\"}[5m])",
+          "legendFormat": "TX"
+        },
+        {
+          "expr": "irate(pve_network_receive_bytes{job=\"pve\", id=\"node/$node\"}[5m])",
+          "legendFormat": "RX"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "TX" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "RX" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Node Disk I/O",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "irate(pve_disk_write_bytes{job=\"pve\", id=\"node/$node\"}[5m])",
+          "legendFormat": "Write"
+        },
+        {
+          "expr": "irate(pve_disk_read_bytes{job=\"pve\", id=\"node/$node\"}[5m])",
+          "legendFormat": "Read"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Virtual Machines",
+      "gridPos": { "x": 0, "y": 19, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "type": "table",
+      "title": "VM / LXC Summary",
+      "description": "All guests with status, CPU, memory and uptime",
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 10 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "pve_guest_info{job=\"pve\", node=\"$node\"}",
+          "legendFormat": "{{name}} ({{vmid}}) [{{type}}]",
+          "instant": true,
+          "format": "table",
+          "refId": "Status"
+        },
+        {
+          "expr": "pve_cpu_usage_ratio{job=\"pve\", node=\"$node\"} * 100",
+          "legendFormat": "",
+          "instant": true,
+          "format": "table",
+          "refId": "CPU"
+        },
+        {
+          "expr": "pve_mem_usage_bytes{job=\"pve\", node=\"$node\"} / pve_max_mem_bytes{job=\"pve\", node=\"$node\"} * 100",
+          "legendFormat": "",
+          "instant": true,
+          "format": "table",
+          "refId": "RAM"
+        },
+        {
+          "expr": "pve_uptime{job=\"pve\", node=\"$node\"}",
+          "legendFormat": "",
+          "instant": true,
+          "format": "table",
+          "refId": "Uptime"
+        }
+      ],
+      "options": {
+        "sortBy": [{ "displayName": "Name", "desc": false }]
+      },
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "Value #Status": "Status",
+              "Value #CPU": "CPU %",
+              "Value #RAM": "RAM %",
+              "Value #Uptime": "Uptime",
+              "name": "Name",
+              "vmid": "VMID",
+              "type": "Type",
+              "status": "State"
+            },
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true,
+              "node": true,
+              "id": true,
+              "template": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "CPU %" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": 0 },
+                    { "color": "yellow", "value": 70 },
+                    { "color": "red", "value": 90 }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "RAM %" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              { "id": "custom.displayMode", "value": "color-background" },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": 0 },
+                    { "color": "yellow", "value": 75 },
+                    { "color": "red", "value": 90 }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Uptime" },
+            "properties": [{ "id": "unit", "value": "dtdurations" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "State" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  { "type": "value", "options": { "running": { "text": "🟢 running", "color": "green" }, "stopped": { "text": "🔴 stopped", "color": "red" } } }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Storage",
+      "gridPos": { "x": 0, "y": 30, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 31,
+      "type": "bargauge",
+      "title": "Storage Pool Usage",
+      "gridPos": { "x": 0, "y": 31, "w": 14, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "(pve_disk_size_bytes{job=\"pve\", node=\"$node\", id=~\"storage/.*\"} - pve_disk_free_bytes{job=\"pve\", node=\"$node\", id=~\"storage/.*\"}) / pve_disk_size_bytes{job=\"pve\", node=\"$node\", id=~\"storage/.*\"} * 100",
+          "legendFormat": "{{id}}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "displayMode": "lcd",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 85 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "table",
+      "title": "Storage Details",
+      "gridPos": { "x": 14, "y": 31, "w": 10, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "pve_disk_size_bytes{job=\"pve\", node=\"$node\", id=~\"storage/.*\"}",
+          "legendFormat": "",
+          "instant": true,
+          "format": "table",
+          "refId": "Total"
+        },
+        {
+          "expr": "pve_disk_free_bytes{job=\"pve\", node=\"$node\", id=~\"storage/.*\"}",
+          "legendFormat": "",
+          "instant": true,
+          "format": "table",
+          "refId": "Free"
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "Value #Total": "Total",
+              "Value #Free": "Free",
+              "id": "Storage"
+            },
+            "excludeByName": {
+              "Time": true, "__name__": true, "job": true,
+              "instance": true, "node": true
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Used",
+            "mode": "reduceRow",
+            "reduce": { "reducer": "diff" },
+            "binary": {
+              "left": "Total",
+              "right": "Free",
+              "operator": "-"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "Total|Free|Used" },
+            "properties": [{ "id": "unit", "value": "bytes" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 40,
+      "type": "row",
+      "title": "Per-VM CPU & Memory Trends",
+      "gridPos": { "x": 0, "y": 39, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Per-VM CPU Usage",
+      "gridPos": { "x": 0, "y": 40, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "pve_cpu_usage_ratio{job=\"pve\", node=\"$node\"} * 100",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": { "lineWidth": 1, "fillOpacity": 5 }
+        }
+      }
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Per-VM Memory Usage",
+      "gridPos": { "x": 12, "y": 40, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "ceb67eiok1qf4d" },
+      "targets": [
+        {
+          "expr": "pve_mem_usage_bytes{job=\"pve\", node=\"$node\"}",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "lineWidth": 1, "fillOpacity": 5 }
+        }
+      }
+    }
+  ]
+}

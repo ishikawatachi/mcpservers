@@ -1,0 +1,124 @@
+####################################################################
+# prometheus.yml — Full monitoring stack configuration
+# NAS path: /volume1/docker/grafana/prometheus.yml
+# 
+# Changes vs. original:
+#   + Added pve job  (Proxmox metrics via pve-exporter)
+#   + Added portainer job (Portainer EE /metrics)
+####################################################################
+
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  scrape_timeout: 20s
+  external_labels:
+    site: "home-lab"
+
+# ──────────────────────────────────────────────────────────────────
+# Self-monitoring
+# ──────────────────────────────────────────────────────────────────
+scrape_configs:
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ─────────────────────────────────────────────────────────────────
+  # NAS / Docker host (Node Exporter)
+  # ─────────────────────────────────────────────────────────────────
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["Node_Exporter:9100"]
+        labels:
+          instance: "synology-nas"
+
+  # ─────────────────────────────────────────────────────────────────
+  # Docker container metrics (cAdvisor)
+  # ─────────────────────────────────────────────────────────────────
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cAdvisor:8080"]
+        labels:
+          instance: "synology-nas"
+
+  # ─────────────────────────────────────────────────────────────────
+  # Internet speed tests
+  # ─────────────────────────────────────────────────────────────────
+  - job_name: "speedtest"
+    scrape_interval: 60m
+    scrape_timeout: 120s
+    static_configs:
+      - targets: ["speedtest_exporter:9798"]
+
+  # ─────────────────────────────────────────────────────────────────
+  # SNMP (network devices)
+  # ─────────────────────────────────────────────────────────────────
+  # SNMP — Synology NAS (using Synology module)
+  # The SNMP exporter is a proxy: Prometheus hits /snmp?target=NAS&module=synology
+  # 172.22.0.1 = prometheus_net bridge gateway = NAS host IP on that bridge
+  # ─────────────────────────────────────────────────────────────────
+  - job_name: "snmp"
+    metrics_path: /snmp
+    params:
+      module: [synology]
+      auth: [public_v2]
+    static_configs:
+      - targets:
+          - "172.22.0.1"   # NAS host — reachable via bridge gateway from within prometheus_net
+        labels:
+          instance: "synology-nas"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+        replacement: "synology-nas"
+      - target_label: __address__
+        replacement: "SNMP_Exporter:9116"
+
+  # SNMP exporter self-metrics (process/go runtime)
+  - job_name: "snmp_exporter"
+    static_configs:
+      - targets: ["SNMP_Exporter:9116"]
+
+  # ─────────────────────────────────────────────────────────────────
+  # UniFi Poller
+  # ─────────────────────────────────────────────────────────────────
+  - job_name: "unifi"
+    static_configs:
+      - targets: ["monitoring-unifi-poller-1:9130"]
+
+  # ─────────────────────────────────────────────────────────────────
+  # Proxmox VE — via prometheus-pve-exporter
+  # Docs: https://github.com/prometheus-pve/prometheus-pve-exporter
+  # ─────────────────────────────────────────────────────────────────
+  - job_name: "pve"
+    scrape_interval: 30s
+    metrics_path: /pve
+    params:
+      module: ["default"]
+      cluster: ["1"]
+      node: ["1"]
+    static_configs:
+      - targets:
+          - "192.168.110.110"  # Proxmox bab1 direct IP (bypasses nginx reverse proxy)
+        labels:
+          instance: "bab1"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+        replacement: "bab1"
+      - target_label: __address__
+        # 172.22.0.1 = prometheus_net gateway = NAS host IP on that bridge
+        # pve_exporter runs in network_mode: host so it's on this address
+        replacement: "172.22.0.1:9221"
+
+  # ─────────────────────────────────────────────────────────────────
+  # Portainer — REMOVED
+  # Portainer EE /metrics is Kubernetes-only; not available for
+  # Docker mode. Removing this job eliminates the permanent
+  # "Target DOWN" alert. Use docker-stats-exporter for container
+  # metrics instead (see portainer dashboard info panel).
+  # ─────────────────────────────────────────────────────────────────

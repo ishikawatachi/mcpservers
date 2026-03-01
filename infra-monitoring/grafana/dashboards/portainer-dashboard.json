@@ -1,0 +1,758 @@
+{
+  "uid": "portainer-overview-v1",
+  "title": "Portainer \u2014 Docker Host & Container Overview",
+  "description": "NAS host metrics via node_exporter. Total container resource usage via cAdvisor (host-level). Per-container metrics require docker-stats-exporter.",
+  "tags": [
+    "portainer",
+    "docker",
+    "nas",
+    "infrastructure"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Host CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\",job=\"node_exporter\"}[2m]))) * 100",
+          "legendFormat": "CPU %",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 65
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Host Memory Usage",
+      "gridPos": {
+        "x": 4,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100",
+          "legendFormat": "RAM %",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Load Average (1m / 5m / 15m)",
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_load1",
+          "legendFormat": "1m",
+          "instant": true
+        },
+        {
+          "expr": "node_load5",
+          "legendFormat": "5m",
+          "instant": true
+        },
+        {
+          "expr": "node_load15",
+          "legendFormat": "15m",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "none",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Host Uptime",
+      "gridPos": {
+        "x": 14,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_time_seconds - node_boot_time_seconds",
+          "legendFormat": "Uptime",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "RAM Available",
+      "gridPos": {
+        "x": 19,
+        "y": 0,
+        "w": 2,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_memory_MemAvailable_bytes",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "RAM Total",
+      "gridPos": {
+        "x": 21,
+        "y": 0,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_memory_MemTotal_bytes",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Host CPU Usage over Time",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\",job=\"node_exporter\"}[2m]))) * 100",
+          "legendFormat": "Total %"
+        },
+        {
+          "expr": "avg(rate(node_cpu_seconds_total{mode=\"system\",job=\"node_exporter\"}[2m])) * 100",
+          "legendFormat": "System %"
+        },
+        {
+          "expr": "avg(rate(node_cpu_seconds_total{mode=\"iowait\",job=\"node_exporter\"}[2m])) * 100",
+          "legendFormat": "IO Wait %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Host Memory over Time",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+          "legendFormat": "Used"
+        },
+        {
+          "expr": "node_memory_Cached_bytes + node_memory_Buffers_bytes",
+          "legendFormat": "Cache"
+        },
+        {
+          "expr": "node_memory_MemAvailable_bytes",
+          "legendFormat": "Available"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Disk Throughput (all devices)",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(irate(node_disk_read_bytes_total{job=\"node_exporter\"}[2m]))",
+          "legendFormat": "Read"
+        },
+        {
+          "expr": "sum(irate(node_disk_written_bytes_total{job=\"node_exporter\"}[2m]))",
+          "legendFormat": "Write"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Load Average over Time",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_load1",
+          "legendFormat": "1m"
+        },
+        {
+          "expr": "node_load5",
+          "legendFormat": "5m"
+        },
+        {
+          "expr": "node_load15",
+          "legendFormat": "15m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5
+          }
+        }
+      }
+    },
+    {
+      "id": 29,
+      "type": "row",
+      "title": "All Containers \u2014 Aggregate Stats (via cAdvisor host cgroup)",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 31,
+      "type": "stat",
+      "title": "Container CPU Usage (all)",
+      "description": "Combined CPU seconds rate across ALL containers on this host, via cAdvisor root cgroup.",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{id=\"/\",job=\"cadvisor\"}[2m])) * 100",
+          "legendFormat": "Total CPU %",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "stat",
+      "title": "Container Memory Usage (all)",
+      "gridPos": {
+        "x": 6,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{id=\"/\",job=\"cadvisor\"})",
+          "legendFormat": "Total Mem",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 20000000000
+              },
+              {
+                "color": "red",
+                "value": 28000000000
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 33,
+      "type": "stat",
+      "title": "Container Net RX",
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(irate(container_network_receive_bytes_total{id=\"/\",job=\"cadvisor\"}[2m]))",
+          "legendFormat": "RX",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      }
+    },
+    {
+      "id": 34,
+      "type": "stat",
+      "title": "Container Net TX",
+      "gridPos": {
+        "x": 18,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(irate(container_network_transmit_bytes_total{id=\"/\",job=\"cadvisor\"}[2m]))",
+          "legendFormat": "TX",
+          "instant": true
+        }
+      ],
+      "options": {
+        "colorMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      }
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "Container CPU over Time (all combined)",
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{id=\"/\",job=\"cadvisor\"}[2m])) * 100",
+          "legendFormat": "All containers CPU %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "Container Memory over Time (all combined)",
+      "gridPos": {
+        "x": 12,
+        "y": 25,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{id=\"/\",job=\"cadvisor\"})",
+          "legendFormat": "All containers RAM"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 37,
+      "type": "text",
+      "title": "Per-Container Metrics \u2014 Status & Next Step",
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 4
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "## Per-Container Breakdown\n\nSynology DSM restricts cAdvisor to the root cgroup only \u2014 individual container metrics are not accessible. Portainer EE `/metrics` is Kubernetes-exclusive.\n\n**To get per-container CPU/memory/network breakdown**, add [`docker-stats-exporter`](https://github.com/wywywywy/docker_stats_exporter) to the monitoring stack:\n```yaml\n  docker-stats-exporter:\n    image: wywywywy/docker_stats_exporter:latest\n    container_name: docker_stats_exporter\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock:ro\n    ports:\n      - \"9487:9487\"\n    networks:\n      - prometheus_net\n```\nThen add a Prometheus job: `job_name: docker_stats`, target `docker_stats_exporter:9487`."
+      }
+    },
+    {
+      "id": 40,
+      "type": "row",
+      "title": "NAS Temperature",
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Hardware Temperature Sensors",
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_hwmon_temp_celsius",
+          "legendFormat": "{{chip}} / {{sensor}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "lineWidth": 2
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

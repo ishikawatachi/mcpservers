@@ -1,0 +1,2220 @@
+{
+  "uid": "lcHlCU2Vz",
+  "title": "Synology NAS \u2014 Full System Overview",
+  "description": "CPU/RAM/Disk/Temp via node_exporter \u00b7 Network via cAdvisor \u00b7 UniFi via unpoller \u00b7 SNMP disk+RAID health \u00b7 Speedtest",
+  "tags": [
+    "synology",
+    "nas",
+    "node_exporter",
+    "snmp",
+    "unifi",
+    "infrastructure"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "NAS Host Health \u2014 node_exporter",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\",job=\"node_exporter\"}[2m]))) * 100",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 65
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "RAM Usage",
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "(1 - node_memory_MemAvailable_bytes{job=\"node_exporter\"} / node_memory_MemTotal_bytes{job=\"node_exporter\"}) * 100",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Load 1m",
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_load1{job=\"node_exporter\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Load 5m",
+      "gridPos": {
+        "x": 11,
+        "y": 1,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_load5{job=\"node_exporter\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Load 15m",
+      "gridPos": {
+        "x": 14,
+        "y": 1,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_load15{job=\"node_exporter\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Uptime",
+      "gridPos": {
+        "x": 17,
+        "y": 1,
+        "w": 4,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_time_seconds{job=\"node_exporter\"} - node_boot_time_seconds{job=\"node_exporter\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "RAM Total",
+      "gridPos": {
+        "x": 21,
+        "y": 1,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_memory_MemTotal_bytes{job=\"node_exporter\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "CPU Temperature",
+      "gridPos": {
+        "x": 8,
+        "y": 3,
+        "w": 4,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_hwmon_temp_celsius{job=\"node_exporter\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 55
+              },
+              {
+                "color": "red",
+                "value": 70
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "RAM Available",
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 4,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_memory_MemAvailable_bytes{job=\"node_exporter\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Disk Used %",
+      "gridPos": {
+        "x": 16,
+        "y": 3,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "container_fs_usage_bytes{job=\"cadvisor\",id=\"/\",device=\"/dev/mapper/cachedev_0\"} / container_fs_limit_bytes{job=\"cadvisor\",id=\"/\",device=\"/dev/mapper/cachedev_0\"} * 100",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Disk Free",
+      "gridPos": {
+        "x": 19,
+        "y": 3,
+        "w": 2,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "container_fs_limit_bytes{job=\"cadvisor\",id=\"/\",device=\"/dev/mapper/cachedev_0\"} - container_fs_usage_bytes{job=\"cadvisor\",id=\"/\",device=\"/dev/mapper/cachedev_0\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Network Devices",
+      "gridPos": {
+        "x": 21,
+        "y": 3,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "unpoller_site_aps{job=\"unifi\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "CPU Usage by Mode",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\",job=\"node_exporter\"}[2m]))) * 100",
+          "legendFormat": "Total",
+          "refId": "0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "avg(rate(node_cpu_seconds_total{mode=\"system\",job=\"node_exporter\"}[2m])) * 100",
+          "legendFormat": "System",
+          "refId": "1",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "avg(rate(node_cpu_seconds_total{mode=\"iowait\",job=\"node_exporter\"}[2m])) * 100",
+          "legendFormat": "IO Wait",
+          "refId": "2",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "avg(rate(node_cpu_seconds_total{mode=\"user\",job=\"node_exporter\"}[2m])) * 100",
+          "legendFormat": "User",
+          "refId": "3",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Memory Breakdown",
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_memory_MemTotal_bytes{job=\"node_exporter\"} - node_memory_MemAvailable_bytes{job=\"node_exporter\"}",
+          "legendFormat": "Used",
+          "refId": "0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "node_memory_Cached_bytes{job=\"node_exporter\"} + node_memory_Buffers_bytes{job=\"node_exporter\"}",
+          "legendFormat": "Cache+Buffer",
+          "refId": "1",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "node_memory_MemAvailable_bytes{job=\"node_exporter\"}",
+          "legendFormat": "Available",
+          "refId": "2",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 29,
+      "type": "row",
+      "title": "Disk & Network I/O \u2014 cAdvisor (root cgroup)",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Disk Throughput",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(irate(node_disk_read_bytes_total{job=\"node_exporter\"}[2m]))",
+          "legendFormat": "Read",
+          "refId": "0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "- sum(irate(node_disk_written_bytes_total{job=\"node_exporter\"}[2m]))",
+          "legendFormat": "Write",
+          "refId": "1",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Disk IOPS",
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(irate(node_disk_reads_completed_total{job=\"node_exporter\"}[2m]))",
+          "legendFormat": "Read ops/s",
+          "refId": "0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "- sum(irate(node_disk_writes_completed_total{job=\"node_exporter\"}[2m]))",
+          "legendFormat": "Write ops/s",
+          "refId": "1",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "iops",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Network Traffic (eth0/eth1/tailscale)",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(irate(container_network_receive_bytes_total{job=\"cadvisor\",id=\"/\",interface=~\"eth.*|tailscale.*\"}[2m]))",
+          "legendFormat": "RX",
+          "refId": "0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "- sum(irate(container_network_transmit_bytes_total{job=\"cadvisor\",id=\"/\",interface=~\"eth.*|tailscale.*\"}[2m]))",
+          "legendFormat": "TX",
+          "refId": "1",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Load Average Trend",
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "node_load1{job=\"node_exporter\"}",
+          "legendFormat": "1m",
+          "refId": "0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "node_load5{job=\"node_exporter\"}",
+          "legendFormat": "5m",
+          "refId": "1",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "node_load15{job=\"node_exporter\"}",
+          "legendFormat": "15m",
+          "refId": "2",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 39,
+      "type": "row",
+      "title": "UniFi Network Health \u2014 unpoller",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 40,
+      "type": "stat",
+      "title": "Total Devices",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 3,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "count(unpoller_device_info{job=\"unifi\"})",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 41,
+      "type": "stat",
+      "title": "WiFi APs",
+      "gridPos": {
+        "x": 3,
+        "y": 29,
+        "w": 3,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "unpoller_site_aps{job=\"unifi\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 42,
+      "type": "stat",
+      "title": "Connected Clients",
+      "gridPos": {
+        "x": 6,
+        "y": 29,
+        "w": 3,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "unpoller_site_stations{job=\"unifi\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 43,
+      "type": "stat",
+      "title": "Switches",
+      "gridPos": {
+        "x": 9,
+        "y": 29,
+        "w": 3,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "unpoller_site_switches{job=\"unifi\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 44,
+      "type": "stat",
+      "title": "WAN Download",
+      "gridPos": {
+        "x": 12,
+        "y": 29,
+        "w": 3,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(unpoller_site_xput_down_rate{job=\"unifi\"})",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 45,
+      "type": "stat",
+      "title": "WAN Upload",
+      "gridPos": {
+        "x": 15,
+        "y": 29,
+        "w": 3,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(unpoller_site_xput_up_rate{job=\"unifi\"})",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 46,
+      "type": "stat",
+      "title": "WAN Latency",
+      "gridPos": {
+        "x": 18,
+        "y": 29,
+        "w": 3,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "unpoller_site_latency_seconds{job=\"unifi\"} * 1000",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 47,
+      "type": "stat",
+      "title": "UniFi Uptime",
+      "gridPos": {
+        "x": 21,
+        "y": 29,
+        "w": 3,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "unpoller_controller_uptime_seconds{job=\"unifi\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 48,
+      "type": "timeseries",
+      "title": "Network Throughput (all UniFi sites)",
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "sum(irate(unpoller_site_receive_rate_bytes{job=\"unifi\"}[5m]))",
+          "legendFormat": "Site RX",
+          "refId": "0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "- sum(irate(unpoller_site_transmit_rate_bytes{job=\"unifi\"}[5m]))",
+          "legendFormat": "Site TX",
+          "refId": "1",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 49,
+      "type": "timeseries",
+      "title": "WiFi Clients Over Time",
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "unpoller_site_stations{job=\"unifi\"}",
+          "legendFormat": "Total clients",
+          "refId": "0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "unpoller_site_users{job=\"unifi\"}",
+          "legendFormat": "Users",
+          "refId": "1",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "unpoller_site_guests{job=\"unifi\"}",
+          "legendFormat": "Guests",
+          "refId": "2",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 50,
+      "type": "row",
+      "title": "Synology SNMP Data (active after prometheus.yml + Prometheus reload)",
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 51,
+      "type": "text",
+      "title": "\u2139\ufe0f SNMP Status",
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 8,
+        "h": 4
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Section auto-populates once you apply the fixed `prometheus.yml` to the NAS.**\n\n**Steps:**\n1. SSH to NAS: `nano /volume1/docker/grafana/prometheus.yml` \u2192 paste updated config\n2. Reload: `docker exec Prometheus kill -HUP 1`\n\n_(Data then appears within 30 seconds)_"
+      }
+    },
+    {
+      "id": 52,
+      "type": "stat",
+      "title": "System Status",
+      "gridPos": {
+        "x": 8,
+        "y": 40,
+        "w": 4,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "systemStatus{job=\"snmp\",instance=\"synology-nas\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 53,
+      "type": "stat",
+      "title": "System Fan",
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "systemFanStatus{job=\"snmp\",instance=\"synology-nas\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 54,
+      "type": "stat",
+      "title": "CPU Fan",
+      "gridPos": {
+        "x": 15,
+        "y": 40,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "cpuFanStatus{job=\"snmp\",instance=\"synology-nas\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 55,
+      "type": "stat",
+      "title": "Power Status",
+      "gridPos": {
+        "x": 18,
+        "y": 40,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "powerStatus{job=\"snmp\",instance=\"synology-nas\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 56,
+      "type": "stat",
+      "title": "NAS Temp (SNMP)",
+      "gridPos": {
+        "x": 21,
+        "y": 40,
+        "w": 3,
+        "h": 2
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "temperature{job=\"snmp\",instance=\"synology-nas\"}",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 55
+              },
+              {
+                "color": "red",
+                "value": 70
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 60,
+      "type": "table",
+      "title": "Disk Status & Temperatures",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "diskTemperature{job=\"snmp\",instance=\"synology-nas\"}",
+          "instant": true,
+          "refId": "A",
+          "legendFormat": "Temp {{diskName}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "diskStatus{job=\"snmp\",instance=\"synology-nas\"}",
+          "instant": true,
+          "refId": "B",
+          "legendFormat": "Status {{diskName}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "displayMode": "auto"
+          }
+        }
+      }
+    },
+    {
+      "id": 61,
+      "type": "stat",
+      "title": "RAID Volume Used %",
+      "gridPos": {
+        "x": 12,
+        "y": 44,
+        "w": 12,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "(raidTotalSize{job=\"snmp\",instance=\"synology-nas\"} - raidFreeSize{job=\"snmp\",instance=\"synology-nas\"}) / raidTotalSize{job=\"snmp\",instance=\"synology-nas\"} * 100",
+          "instant": true,
+          "legendFormat": "{{raidName}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 62,
+      "type": "stat",
+      "title": "RAID Volume Free",
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "raidFreeSize{job=\"snmp\",instance=\"synology-nas\"}",
+          "instant": true,
+          "legendFormat": "{{raidName}} Free",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1
+        }
+      }
+    },
+    {
+      "id": 70,
+      "type": "row",
+      "title": "Internet Speed \u2014 speedtest (60 min interval)",
+      "gridPos": {
+        "x": 0,
+        "y": 52,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 71,
+      "type": "stat",
+      "title": "Download (avg 7d)",
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "avg(avg_over_time(speedtest_download_speed_Bps[1w:5m]))",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "binBps",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 72,
+      "type": "stat",
+      "title": "Upload (avg 7d)",
+      "gridPos": {
+        "x": 4,
+        "y": 53,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "avg(avg_over_time(speedtest_upload_speed_Bps[1w:5m]))",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "binBps",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 73,
+      "type": "stat",
+      "title": "Latency (avg 7d)",
+      "gridPos": {
+        "x": 8,
+        "y": 53,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "avg(avg_over_time(speedtest_latency_seconds[1w:5m])) * 1000",
+          "instant": true,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 74,
+      "type": "timeseries",
+      "title": "Internet Speed Over Time",
+      "gridPos": {
+        "x": 0,
+        "y": 57,
+        "w": 16,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "speedtest_download_speed_Bps",
+          "legendFormat": "Download",
+          "refId": "0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        },
+        {
+          "expr": "speedtest_upload_speed_Bps",
+          "legendFormat": "Upload",
+          "refId": "1",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "binBps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 75,
+      "type": "timeseries",
+      "title": "Latency Over Time",
+      "gridPos": {
+        "x": 16,
+        "y": 57,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ceb67eiok1qf4d"
+      },
+      "targets": [
+        {
+          "expr": "speedtest_latency_seconds * 1000",
+          "legendFormat": "Latency ms",
+          "refId": "0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ceb67eiok1qf4d"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        }
+      }
+    }
+  ]
+}

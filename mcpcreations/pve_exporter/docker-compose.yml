@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  pve-exporter:
+    image: prompve/prometheus-pve-exporter:latest
+    container_name: pve-exporter
+    restart: unless-stopped
+    environment:
+      - PVE_USER=prometheus@pve
+      - PVE_TOKEN_NAME=monitoring
+      - PVE_TOKEN_VALUE=REPLACE_WITH_TOKEN_SECRET
+      - PVE_VERIFY_SSL=false
+    ports:
+      - "9221:9221"
+    networks:
+      - prometheus_net
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+
+networks:
+  prometheus_net:
+    external: true

@@ -1,0 +1,566 @@
+# Synology SNMP Exporter Module Configuration
+# Generated for prometheus/snmp_exporter v0.30.x
+#
+# Deploy:
+#   cp synology-snmp.yml /volume1/docker/grafana/snmp.yml
+#   docker restart SNMP_Exporter
+#
+# Verify:
+#   curl "http://localhost:9116/snmp?module=synology&target=localhost"
+#
+# Synology MIB base OID: .1.3.6.1.4.1.6574
+#   .1    SYNOLOGY-SYSTEM-MIB    (system status, temperature, fans, power)
+#   .2    SYNOLOGY-DISK-MIB      (disk status, temperature, S.M.A.R.T.)
+#   .3    SYNOLOGY-RAID-MIB      (RAID status, free/total size)
+#   .4    SYNOLOGY-UPS-MIB       (UPS battery, load, status)
+#   .5    SYNOLOGY-SMART-MIB     (S.M.A.R.T. attributes per disk)
+#   .6    SYNOLOGY-SERVICES-MIB  (service user counts)
+#   .101  SYNOLOGY-STORAGEIO-MIB (disk I/O bytes/ops per block device)
+#   .102  SYNOLOGY-SPACEIO-MIB   (I/O bytes/ops per BTRFS/volume)
+#   .104  SYNOLOGY-ISCSILUN-MIB  (iSCSI LUN table)
+#
+# Auth is passed by Prometheus via params: auth: [public_v2]
+# Do NOT put auth: or auth_ref: inside this module block (snmp_exporter v0.30 schema).
+#
+# NOTE: Synology DSM must have SNMP enabled under:
+#   Control Panel → Terminal & SNMP → SNMP → Enable SNMP service (v2c, community: public)
+#
+# TODO (future): migrate to SNMPv3 with authPriv once v2c is confirmed working:
+#   1. Create SNMPv3 user in DSM (Control Panel → Terminal & SNMP → SNMP → SNMPv3)
+#   2. Update auths below: version: 3, security_level: authPriv,
+#      auth_protocol: SHA, priv_protocol: AES, username/password/priv_password
+#   3. Update prometheus.yml snmp params: auth: [snmpv3_auth_name]
+#   4. Disable v2c public community in DSM
+
+auths:
+  public_v2:
+    community: public
+    version: 2
+
+modules:
+  synology:
+    walk:
+      - 1.3.6.1.4.1.6574.1       # SYNOLOGY-SYSTEM-MIB (system status, temperature, fans, power, model, firmware)
+      - 1.3.6.1.4.1.6574.2       # SYNOLOGY-DISK-MIB (disk status, temperature)
+      - 1.3.6.1.4.1.6574.3       # SYNOLOGY-RAID-MIB (RAID status, free/total size)
+      - 1.3.6.1.4.1.6574.4       # SYNOLOGY-UPS-MIB (battery, load, status)
+      - 1.3.6.1.4.1.6574.5       # SYNOLOGY-SMART-MIB (S.M.A.R.T. attributes)
+      - 1.3.6.1.4.1.6574.6       # SYNOLOGY-SERVICES-MIB (service user counts)
+      - 1.3.6.1.4.1.6574.101     # SYNOLOGY-STORAGEIO-MIB (block device I/O stats)
+      - 1.3.6.1.4.1.6574.102     # SYNOLOGY-SPACEIO-MIB (BTRFS/volume I/O stats)
+      - 1.3.6.1.4.1.6574.104     # SYNOLOGY-ISCSILUN-MIB (iSCSI LUN table)
+      - 1.3.6.1.4.1.2021.4       # UCD-SNMP-MIB memory
+      - 1.3.6.1.4.1.2021.10      # UCD-SNMP-MIB load average
+      - 1.3.6.1.4.1.2021.11      # UCD-SNMP-MIB system stats
+      - 1.3.6.1.2.1.1            # SNMPv2-MIB: sysDescr, sysUpTime, sysName
+      - 1.3.6.1.2.1.25.2.3       # HOST-RESOURCES-MIB: hrStorageTable (disk usage)
+      - 1.3.6.1.2.1.25.3.3       # HOST-RESOURCES-MIB: hrProcessorTable (CPU)
+      - 1.3.6.1.2.1.2.2          # IF-MIB: ifTable (network interfaces)
+
+    metrics:
+      # ─────────── SYSTEM ───────────
+      - name: synology_system_status
+        oid: 1.3.6.1.4.1.6574.1.1
+        type: gauge
+        help: "System status (1=normal, 2=failed)"
+
+      - name: synology_system_temperature_celsius
+        oid: 1.3.6.1.4.1.6574.1.2
+        type: gauge
+        help: "System temperature in Celsius"
+
+      - name: synology_system_power_status
+        oid: 1.3.6.1.4.1.6574.1.3
+        type: gauge
+        help: "Power status (1=normal, 2=failed)"
+
+      - name: synology_system_cpu_fan_status
+        oid: 1.3.6.1.4.1.6574.1.4.1
+        type: gauge
+        help: "CPU fan status (1=normal, 2=failed)"
+
+      - name: synology_system_fan_status
+        oid: 1.3.6.1.4.1.6574.1.4.2
+        type: gauge
+        help: "System fan status (1=normal, 2=failed)"
+
+      # ─────────── DISK ───────────
+      - name: synology_disk_status
+        oid: 1.3.6.1.4.1.6574.2.1.1.5
+        type: gauge
+        help: "Disk status (1=normal, 2=initialized, 3=notInitialized, 4=systemPartitionFailed, 5=crashed)"
+        indexes:
+          - labelname: disk_index
+            type: gauge
+        lookups:
+          - labels: [disk_index]
+            labelname: disk_id
+            oid: 1.3.6.1.4.1.6574.2.1.1.2
+            type: DisplayString
+          - labels: [disk_index]
+            labelname: disk_model
+            oid: 1.3.6.1.4.1.6574.2.1.1.3
+            type: DisplayString
+          - labels: [disk_index]
+            labelname: disk_type
+            oid: 1.3.6.1.4.1.6574.2.1.1.4
+            type: DisplayString
+
+      - name: synology_disk_temperature_celsius
+        oid: 1.3.6.1.4.1.6574.2.1.1.6
+        type: gauge
+        help: "Disk temperature in Celsius"
+        indexes:
+          - labelname: disk_index
+            type: gauge
+        lookups:
+          - labels: [disk_index]
+            labelname: disk_id
+            oid: 1.3.6.1.4.1.6574.2.1.1.2
+            type: DisplayString
+          - labels: [disk_index]
+            labelname: disk_model
+            oid: 1.3.6.1.4.1.6574.2.1.1.3
+            type: DisplayString
+
+      # ─────────── RAID ───────────
+      - name: synology_raid_status
+        oid: 1.3.6.1.4.1.6574.3.1.1.3
+        type: gauge
+        help: "RAID status (1=normal, 2=repairing, 3=migrating, 4=expanding, 5=deleting, 6=creating, 7=RaidSyncing, 8=RaidParityChecking, 9=RaidAssembling, 10=Canceling, 11=degrade, 12=crashed)"
+        indexes:
+          - labelname: raid_index
+            type: gauge
+        lookups:
+          - labels: [raid_index]
+            labelname: raid_name
+            oid: 1.3.6.1.4.1.6574.3.1.1.2
+            type: DisplayString
+
+      - name: synology_raid_free_bytes
+        oid: 1.3.6.1.4.1.6574.3.1.1.4
+        type: gauge
+        help: "RAID free space in bytes"
+        indexes:
+          - labelname: raid_index
+            type: gauge
+        lookups:
+          - labels: [raid_index]
+            labelname: raid_name
+            oid: 1.3.6.1.4.1.6574.3.1.1.2
+            type: DisplayString
+
+      - name: synology_raid_total_bytes
+        oid: 1.3.6.1.4.1.6574.3.1.1.5
+        type: gauge
+        help: "RAID total space in bytes"
+        indexes:
+          - labelname: raid_index
+            type: gauge
+        lookups:
+          - labels: [raid_index]
+            labelname: raid_name
+            oid: 1.3.6.1.4.1.6574.3.1.1.2
+            type: DisplayString
+
+      # ─────────── SERVICES ───────────
+      - name: synology_service_users
+        oid: 1.3.6.1.4.1.6574.6.1.1.3
+        type: gauge
+        help: "Number of users connected to service"
+        indexes:
+          - labelname: service_index
+            type: gauge
+        lookups:
+          - labels: [service_index]
+            labelname: service_name
+            oid: 1.3.6.1.4.1.6574.6.1.1.2
+            type: DisplayString
+
+      # ─────────── LOAD AVERAGE (UCD) ───────────
+      - name: synology_load_average
+        oid: 1.3.6.1.4.1.2021.10.1.3
+        type: DisplayString
+        help: "System load average (1min, 5min, 15min)"
+        indexes:
+          - labelname: load_index
+            type: gauge
+        lookups:
+          - labels: [load_index]
+            labelname: load_name
+            oid: 1.3.6.1.4.1.2021.10.1.2
+            type: DisplayString
+
+      # ─────────── MEMORY (UCD) ───────────
+      - name: synology_memory_total_swap_kb
+        oid: 1.3.6.1.4.1.2021.4.3
+        type: gauge
+        help: "Total swap memory in KB"
+
+      - name: synology_memory_avail_swap_kb
+        oid: 1.3.6.1.4.1.2021.4.4
+        type: gauge
+        help: "Available swap memory in KB"
+
+      - name: synology_memory_total_real_kb
+        oid: 1.3.6.1.4.1.2021.4.5
+        type: gauge
+        help: "Total real (physical) memory in KB"
+
+      - name: synology_memory_avail_real_kb
+        oid: 1.3.6.1.4.1.2021.4.6
+        type: gauge
+        help: "Available real (physical) memory in KB"
+
+      - name: synology_memory_shared_kb
+        oid: 1.3.6.1.4.1.2021.4.13
+        type: gauge
+        help: "Shared memory in KB"
+
+      - name: synology_memory_buffer_kb
+        oid: 1.3.6.1.4.1.2021.4.14
+        type: gauge
+        help: "Buffer memory in KB"
+
+      - name: synology_memory_cached_kb
+        oid: 1.3.6.1.4.1.2021.4.15
+        type: gauge
+        help: "Cached memory in KB"
+
+      # ─────────── UPTIME ───────────
+      - name: synology_uptime_seconds
+        oid: 1.3.6.1.2.1.1.3
+        type: gauge
+        help: "System uptime in seconds (from sysUpTime timeticks / 100)"
+
+      # ─────────── CPU (hrProcessorLoad) ───────────
+      - name: synology_cpu_load_percent
+        oid: 1.3.6.1.2.1.25.3.3.1.2
+        type: gauge
+        help: "CPU load percentage per processor"
+        indexes:
+          - labelname: cpu_index
+            type: gauge
+
+      # ─────────── NETWORK INTERFACES (ifTable) ───────────
+      - name: synology_if_in_octets
+        oid: 1.3.6.1.2.1.2.2.1.10
+        type: counter
+        help: "Total octets received on interface"
+        indexes:
+          - labelname: if_index
+            type: gauge
+        lookups:
+          - labels: [if_index]
+            labelname: if_descr
+            oid: 1.3.6.1.2.1.2.2.1.2
+            type: DisplayString
+
+      - name: synology_if_out_octets
+        oid: 1.3.6.1.2.1.2.2.1.16
+        type: counter
+        help: "Total octets transmitted on interface"
+        indexes:
+          - labelname: if_index
+            type: gauge
+        lookups:
+          - labels: [if_index]
+            labelname: if_descr
+            oid: 1.3.6.1.2.1.2.2.1.2
+            type: DisplayString
+      # ─────────── UPS (SYNOLOGY-UPS-MIB) ───────────
+      # OID base: 1.3.6.1.4.1.6574.4
+      # upsDeviceModel / upsDeviceSerial live under .1.1.x (device info table)
+      - name: synology_ups_battery_charge_percent
+        oid: 1.3.6.1.4.1.6574.4.2.1
+        type: gauge
+        help: "UPS battery charge percentage (0-100)"
+
+      - name: synology_ups_battery_charge_warning_percent
+        oid: 1.3.6.1.4.1.6574.4.2.2
+        type: gauge
+        help: "UPS battery charge warning threshold percentage"
+
+      - name: synology_ups_battery_remaining_minutes
+        oid: 1.3.6.1.4.1.6574.4.2.3
+        type: gauge
+        help: "UPS estimated battery runtime remaining in minutes"
+
+      - name: synology_ups_battery_load_percent
+        oid: 1.3.6.1.4.1.6574.4.2.4
+        type: gauge
+        help: "UPS load as percent of rated capacity"
+
+      - name: synology_ups_battery_voltage
+        oid: 1.3.6.1.4.1.6574.4.2.5
+        type: gauge
+        help: "UPS battery voltage (tenths of Volt — divide by 10 for V)"
+
+      - name: synology_ups_battery_temperature_celsius
+        oid: 1.3.6.1.4.1.6574.4.2.6
+        type: gauge
+        help: "UPS battery temperature in Celsius"
+
+      # ─────────── STORAGEIO (SYNOLOGY-STORAGEIO-MIB .101) ───────────
+      # Per block device (sda, sdb, …) I/O statistics
+      - name: synology_storageio_read_bytes_total
+        oid: 1.3.6.1.4.1.6574.101.1.1.3
+        type: counter
+        help: "Total bytes read from storage device (cumulative)"
+        indexes:
+          - labelname: storageio_index
+            type: gauge
+        lookups:
+          - labels: [storageio_index]
+            labelname: device
+            oid: 1.3.6.1.4.1.6574.101.1.1.2
+            type: DisplayString
+
+      - name: synology_storageio_write_bytes_total
+        oid: 1.3.6.1.4.1.6574.101.1.1.4
+        type: counter
+        help: "Total bytes written to storage device (cumulative)"
+        indexes:
+          - labelname: storageio_index
+            type: gauge
+        lookups:
+          - labels: [storageio_index]
+            labelname: device
+            oid: 1.3.6.1.4.1.6574.101.1.1.2
+            type: DisplayString
+
+      - name: synology_storageio_reads_total
+        oid: 1.3.6.1.4.1.6574.101.1.1.5
+        type: counter
+        help: "Total read operations on storage device (cumulative)"
+        indexes:
+          - labelname: storageio_index
+            type: gauge
+        lookups:
+          - labels: [storageio_index]
+            labelname: device
+            oid: 1.3.6.1.4.1.6574.101.1.1.2
+            type: DisplayString
+
+      - name: synology_storageio_writes_total
+        oid: 1.3.6.1.4.1.6574.101.1.1.6
+        type: counter
+        help: "Total write operations on storage device (cumulative)"
+        indexes:
+          - labelname: storageio_index
+            type: gauge
+        lookups:
+          - labels: [storageio_index]
+            labelname: device
+            oid: 1.3.6.1.4.1.6574.101.1.1.2
+            type: DisplayString
+
+      - name: synology_storageio_load_percent_1min
+        oid: 1.3.6.1.4.1.6574.101.1.1.12
+        type: gauge
+        help: "Storage device I/O utilisation (1-minute average, percent)"
+        indexes:
+          - labelname: storageio_index
+            type: gauge
+        lookups:
+          - labels: [storageio_index]
+            labelname: device
+            oid: 1.3.6.1.4.1.6574.101.1.1.2
+            type: DisplayString
+
+      - name: synology_storageio_load_percent_5min
+        oid: 1.3.6.1.4.1.6574.101.1.1.13
+        type: gauge
+        help: "Storage device I/O utilisation (5-minute average, percent)"
+        indexes:
+          - labelname: storageio_index
+            type: gauge
+        lookups:
+          - labels: [storageio_index]
+            labelname: device
+            oid: 1.3.6.1.4.1.6574.101.1.1.2
+            type: DisplayString
+
+      - name: synology_storageio_load_percent_15min
+        oid: 1.3.6.1.4.1.6574.101.1.1.14
+        type: gauge
+        help: "Storage device I/O utilisation (15-minute average, percent)"
+        indexes:
+          - labelname: storageio_index
+            type: gauge
+        lookups:
+          - labels: [storageio_index]
+            labelname: device
+            oid: 1.3.6.1.4.1.6574.101.1.1.2
+            type: DisplayString
+
+      # ─────────── SPACEIO (SYNOLOGY-SPACEIO-MIB .102) ───────────
+      # Per BTRFS / volume I/O statistics (maps to /volume1, /volume2, …)
+      - name: synology_spaceio_read_bytes_total
+        oid: 1.3.6.1.4.1.6574.102.1.1.3
+        type: counter
+        help: "Total bytes read from volume (cumulative)"
+        indexes:
+          - labelname: spaceio_index
+            type: gauge
+        lookups:
+          - labels: [spaceio_index]
+            labelname: volume
+            oid: 1.3.6.1.4.1.6574.102.1.1.2
+            type: DisplayString
+
+      - name: synology_spaceio_write_bytes_total
+        oid: 1.3.6.1.4.1.6574.102.1.1.4
+        type: counter
+        help: "Total bytes written to volume (cumulative)"
+        indexes:
+          - labelname: spaceio_index
+            type: gauge
+        lookups:
+          - labels: [spaceio_index]
+            labelname: volume
+            oid: 1.3.6.1.4.1.6574.102.1.1.2
+            type: DisplayString
+
+      - name: synology_spaceio_reads_total
+        oid: 1.3.6.1.4.1.6574.102.1.1.5
+        type: counter
+        help: "Total read operations on volume (cumulative)"
+        indexes:
+          - labelname: spaceio_index
+            type: gauge
+        lookups:
+          - labels: [spaceio_index]
+            labelname: volume
+            oid: 1.3.6.1.4.1.6574.102.1.1.2
+            type: DisplayString
+
+      - name: synology_spaceio_writes_total
+        oid: 1.3.6.1.4.1.6574.102.1.1.6
+        type: counter
+        help: "Total write operations on volume (cumulative)"
+        indexes:
+          - labelname: spaceio_index
+            type: gauge
+        lookups:
+          - labels: [spaceio_index]
+            labelname: volume
+            oid: 1.3.6.1.4.1.6574.102.1.1.2
+            type: DisplayString
+
+      - name: synology_spaceio_load_percent_1min
+        oid: 1.3.6.1.4.1.6574.102.1.1.12
+        type: gauge
+        help: "Volume I/O utilisation (1-minute average, percent)"
+        indexes:
+          - labelname: spaceio_index
+            type: gauge
+        lookups:
+          - labels: [spaceio_index]
+            labelname: volume
+            oid: 1.3.6.1.4.1.6574.102.1.1.2
+            type: DisplayString
+
+      - name: synology_spaceio_load_percent_5min
+        oid: 1.3.6.1.4.1.6574.102.1.1.13
+        type: gauge
+        help: "Volume I/O utilisation (5-minute average, percent)"
+        indexes:
+          - labelname: spaceio_index
+            type: gauge
+        lookups:
+          - labels: [spaceio_index]
+            labelname: volume
+            oid: 1.3.6.1.4.1.6574.102.1.1.2
+            type: DisplayString
+
+      - name: synology_spaceio_load_percent_15min
+        oid: 1.3.6.1.4.1.6574.102.1.1.14
+        type: gauge
+        help: "Volume I/O utilisation (15-minute average, percent)"
+        indexes:
+          - labelname: spaceio_index
+            type: gauge
+        lookups:
+          - labels: [spaceio_index]
+            labelname: volume
+            oid: 1.3.6.1.4.1.6574.102.1.1.2
+            type: DisplayString
+
+      # ─────────── S.M.A.R.T. (SYNOLOGY-SMART-MIB .5) ───────────
+      # Two-dimensional index: diskSMARTInfoIndex (disk) + diskSMARTAttrIndex (attribute)
+      - name: synology_smart_attr_current
+        oid: 1.3.6.1.4.1.6574.5.1.1.6
+        type: gauge
+        help: "S.M.A.R.T. attribute current value"
+        indexes:
+          - labelname: smart_disk_index
+            type: gauge
+          - labelname: smart_attr_index
+            type: gauge
+        lookups:
+          - labels: [smart_disk_index]
+            labelname: disk_name
+            oid: 1.3.6.1.4.1.6574.5.1.1.2
+            type: DisplayString
+          - labels: [smart_disk_index, smart_attr_index]
+            labelname: attr_name
+            oid: 1.3.6.1.4.1.6574.5.1.1.4
+            type: DisplayString
+
+      - name: synology_smart_attr_worst
+        oid: 1.3.6.1.4.1.6574.5.1.1.7
+        type: gauge
+        help: "S.M.A.R.T. attribute worst ever value"
+        indexes:
+          - labelname: smart_disk_index
+            type: gauge
+          - labelname: smart_attr_index
+            type: gauge
+        lookups:
+          - labels: [smart_disk_index]
+            labelname: disk_name
+            oid: 1.3.6.1.4.1.6574.5.1.1.2
+            type: DisplayString
+          - labels: [smart_disk_index, smart_attr_index]
+            labelname: attr_name
+            oid: 1.3.6.1.4.1.6574.5.1.1.4
+            type: DisplayString
+
+      - name: synology_smart_attr_threshold
+        oid: 1.3.6.1.4.1.6574.5.1.1.8
+        type: gauge
+        help: "S.M.A.R.T. attribute failure threshold"
+        indexes:
+          - labelname: smart_disk_index
+            type: gauge
+          - labelname: smart_attr_index
+            type: gauge
+        lookups:
+          - labels: [smart_disk_index]
+            labelname: disk_name
+            oid: 1.3.6.1.4.1.6574.5.1.1.2
+            type: DisplayString
+          - labels: [smart_disk_index, smart_attr_index]
+            labelname: attr_name
+            oid: 1.3.6.1.4.1.6574.5.1.1.4
+            type: DisplayString
+
+      - name: synology_smart_attr_raw
+        oid: 1.3.6.1.4.1.6574.5.1.1.9
+        type: gauge
+        help: "S.M.A.R.T. attribute raw value (hardware-specific)"
+        indexes:
+          - labelname: smart_disk_index
+            type: gauge
+          - labelname: smart_attr_index
+            type: gauge
+        lookups:
+          - labels: [smart_disk_index]
+            labelname: disk_name
+            oid: 1.3.6.1.4.1.6574.5.1.1.2
+            type: DisplayString
+          - labels: [smart_disk_index, smart_attr_index]
+            labelname: attr_name
+            oid: 1.3.6.1.4.1.6574.5.1.1.4
+            type: DisplayString

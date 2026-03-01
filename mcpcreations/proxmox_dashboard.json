@@ -1,0 +1,56 @@
+{
+  "title": "Proxmox Cluster Overview",
+  "tags": ["proxmox", "cluster", "mcp"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 0,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Cluster Health",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "auto", "textMode": "auto", "colorMode": "background"},
+      "description": "Node: bab1, Status: online, Quorum: 1",
+      "targets": []
+    },
+    {
+      "id": 2,
+      "title": "Node Resource Usage",
+      "type": "bargauge",
+      "gridPos": {"h": 4, "w": 12, "x": 6, "y": 0},
+      "options": {"displayMode": "basic"},
+      "description": "CPU: 0.9/14, RAM: 30.04/62.12 GB, Disk: 34.63/93.93 GB",
+      "targets": []
+    },
+    {
+      "id": 3,
+      "title": "VM/LXC Summary",
+      "type": "table",
+      "gridPos": {"h": 8, "w": 18, "x": 0, "y": 4},
+      "options": {},
+      "description": "Shows all VMs/LXCs, state, CPU/RAM usage, uptime",
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "targets": []
+    },
+    {
+      "id": 4,
+      "title": "Storage Pools",
+      "type": "piechart",
+      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 12},
+      "options": {},
+      "description": "local-lvm: 455.55/1710.01 GB, local: 34.63/93.93 GB",
+      "targets": []
+    },
+    {
+      "id": 5,
+      "title": "Recent Tasks",
+      "type": "table",
+      "gridPos": {"h": 4, "w": 10, "x": 8, "y": 12},
+      "options": {},
+      "description": "Last 10 cluster tasks (migrations, backups, errors)",
+      "targets": []
+    }
+  ]
+}

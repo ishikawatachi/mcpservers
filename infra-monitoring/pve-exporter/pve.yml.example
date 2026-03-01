@@ -1,0 +1,22 @@
+# pve.yml — prometheus-pve-exporter credentials
+# NAS path: /volume1/docker/grafana/pve.yml
+#
+# IMPORTANT: verify_cert MUST be false when connecting via direct IP (192.168.110.110)
+# because the Proxmox TLS cert is issued for pm.local.defaultvaluation.com, not the IP.
+#
+# How to create the API token in Proxmox:
+#   Datacenter → Permissions → API Tokens → Add
+#   User: root@pam  (or a dedicated monitoring user)
+#   Token ID: prometheus
+#   Privilege Separation: unchecked (inherits full permissions)
+#   → note the generated secret
+#
+# Then grant the token read access:
+#   Datacenter → Permissions → Add → API Token Permission
+#   Path: /  Role: PVEAuditor  Token: root@pam!prometheus
+
+default:
+  user: root@pam
+  token_name: "prometheus"
+  token_value: "REPLACE_WITH_YOUR_TOKEN_SECRET"
+  verify_ssl: false

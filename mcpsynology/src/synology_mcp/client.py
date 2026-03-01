@@ -1,19 +1,16 @@
 """
 Async Synology DSM WebAPI client.
 
-Authentication uses a Personal Access Token (PAT) — available in DSM 7.2.2+.
-The PAT is sent two ways for maximum compatibility:
-  • HTTP header:  Authorization: Bearer <token>
-  • Query param:  _sid=<token>  (required for older CGI endpoints like Storage.CGI)
+Authentication uses SYNO.API.Auth session login (username + password).
+On __aenter__  → GET login  → receive sid (session ID)
+All requests    → include _sid=<sid> as query parameter
+On __aexit__   → GET logout
 
 All DSM responses are wrapped in {"success": true/false, "data": ...}.
 This client unwraps the data and raises ``SynologyAPIError`` on errors.
 
 DSM WebAPI base path:  https://NAS:PORT/webapi/
-Dynamic path per API:  resolved via SYNO.API.Info discovery.
-
-All endpoints support GET with query params; some also accept POST.
-This client always uses GET for reads and POST only where DSM requires it.
+All confirmed APIs on kusanagi.diskstation.me use entry.cgi (verified live).
 """
 from __future__ import annotations
 
@@ -33,20 +30,21 @@ log = structlog.get_logger(__name__)
 # ---------------------------------------------------------------------------
 _STATIC_CGI_MAP: Dict[str, Tuple[str, int]] = {
     # api_name -> (cgi_path, max_version)
-    "SYNO.API.Info":                   ("query.cgi", 1),
-    "SYNO.DSM.Info":                   ("entry.cgi", 1),
-    "SYNO.Core.System.Utilization":    ("entry.cgi", 1),
-    "SYNO.Storage.CGI.Storage":        ("storage.cgi", 1),
-    "SYNO.Storage.CGI.HddMan":         ("storage.cgi", 1),
-    "SYNO.Core.Share":                 ("entry.cgi", 1),
-    "SYNO.Core.Package":               ("entry.cgi", 1),
-    "SYNO.Core.TaskScheduler":         ("entry.cgi", 1),
-    "SYNO.Docker.Container":           ("entry.cgi", 1),
-    "SYNO.Docker.Image":               ("entry.cgi", 1),
-    "SYNO.FileStation.Info":           ("entry.cgi", 2),
-    "SYNO.FileStation.List":           ("entry.cgi", 2),
-    "SYNO.Core.SecurityScan.Status":   ("entry.cgi", 1),
-    "SYNO.Backup.Task":                ("entry.cgi", 1),
+    # ALL verified live against kusanagi.diskstation.me:5001
+    "SYNO.API.Info":                 ("query.cgi", 1),
+    "SYNO.API.Auth":                 ("entry.cgi", 7),
+    "SYNO.DSM.Info":                 ("entry.cgi", 2),
+    "SYNO.Core.System.Utilization":  ("entry.cgi", 1),
+    "SYNO.Storage.CGI.Storage":      ("entry.cgi", 1),  # entry.cgi, NOT storage.cgi
+    "SYNO.Storage.CGI.HddMan":       ("entry.cgi", 1),  # entry.cgi, NOT storage.cgi
+    "SYNO.Core.Share":               ("entry.cgi", 1),
+    "SYNO.Core.Package":             ("entry.cgi", 2),
+    "SYNO.Core.TaskScheduler":       ("entry.cgi", 4),
+    "SYNO.Docker.Container":         ("entry.cgi", 1),
+    "SYNO.Docker.Image":             ("entry.cgi", 1),
+    "SYNO.FileStation.List":         ("entry.cgi", 2),
+    "SYNO.Core.SecurityScan.Status": ("entry.cgi", 1),
+    "SYNO.Backup.Task":              ("entry.cgi", 2),
 }
 
 
@@ -93,16 +91,18 @@ def _dsm_error_message(code: int) -> str:
 
 
 class SynologyClient:
-    """Async context-manager wrapper around the Synology DSM WebAPI."""
+    """Async context-manager wrapper around the Synology DSM WebAPI.
+
+    Auth flow:
+      __aenter__  → SYNO.API.Auth login  → stores self._sid
+      all calls   → pass _sid=<sid> as query param
+      __aexit__   → SYNO.API.Auth logout → invalidates session
+    """
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._base_url = settings.synology_url.rstrip("/") + "/webapi/"
-        # PAT sent as Bearer header AND as _sid for CGI endpoints
-        self._headers = {
-            "Authorization": f"Bearer {settings.api_token}",
-            "Accept": "application/json",
-        }
+        self._sid: Optional[str] = None
         self._client: Optional[httpx.AsyncClient] = None
 
     # ------------------------------------------------------------------
@@ -112,16 +112,86 @@ class SynologyClient:
     async def __aenter__(self) -> "SynologyClient":
         self._client = httpx.AsyncClient(
             base_url=self._base_url,
-            headers=self._headers,
+            headers={"Accept": "application/json"},
             verify=self._settings.ssl_verify,
             timeout=self._settings.timeout,
         )
+        await self._login()
         return self
 
     async def __aexit__(self, *_: Any) -> None:
-        if self._client:
-            await self._client.aclose()
-            self._client = None
+        try:
+            if self._client and self._sid:
+                await self._logout()
+        finally:
+            if self._client:
+                await self._client.aclose()
+                self._client = None
+            self._sid = None
+
+    # ------------------------------------------------------------------
+    # Login / logout
+    # ------------------------------------------------------------------
+
+    async def _login(self) -> None:
+        """Authenticate with SYNO.API.Auth and cache the session SID."""
+        client = self._client_or_raise()
+        params = {
+            "api": "SYNO.API.Auth",
+            "version": 7,
+            "method": "login",
+            "account": self._settings.username,
+            "passwd": self._settings.password,
+            "format": "sid",
+            "session": "synology-mcp",
+        }
+        t0 = time.monotonic()
+        response = await client.get("entry.cgi", params=params)
+        elapsed = round((time.monotonic() - t0) * 1000)
+
+        log.info("synology.login", status=response.status_code, elapsed_ms=elapsed)
+
+        if not response.is_success:
+            raise SynologyAPIError(response.status_code, "Login request failed")
+
+        body = response.json()
+        if not body.get("success", False):
+            err = body.get("error", {})
+            code = err.get("code", 0)
+            _AUTH_ERRORS = {
+                400: "No such account or incorrect password",
+                401: "Account disabled",
+                402: "Account locked (too many failed attempts)",
+                403: "Account permission denied",
+                404: "2-factor authentication required",
+                405: "2-factor authentication failed",
+                406: "Enforce 2-factor authentication",
+                407: "Blocked IP",
+                408: "Expired password",
+                409: "Expired password (cannot change)",
+            }
+            msg = _AUTH_ERRORS.get(code, f"Login failed with DSM error code {code}")
+            raise SynologyAPIError(200, msg, error_code=code)
+
+        self._sid = body["data"]["sid"]
+        log.info("synology.login_ok")
+
+    async def _logout(self) -> None:
+        """Invalidate the current session via SYNO.API.Auth logout."""
+        client = self._client_or_raise()
+        try:
+            await client.get(
+                "entry.cgi",
+                params={
+                    "api": "SYNO.API.Auth",
+                    "version": 7,
+                    "method": "logout",
+                    "_sid": self._sid,
+                },
+            )
+            log.info("synology.logout_ok")
+        except Exception as exc:  # noqa: BLE001
+            log.warning("synology.logout_failed", error=str(exc))
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -135,9 +205,11 @@ class SynologyClient:
     async def _get(self, api: str, method: str, extra: Optional[Dict[str, Any]] = None) -> Any:
         """Perform a DSM WebAPI GET request and return the ``data`` payload.
 
-        Resolves the CGI path from ``_STATIC_CGI_MAP`` (falls back to entry.cgi).
-        Passes the PAT as both the Bearer header and ``_sid`` query parameter.
+        Resolves the CGI path and version from ``_STATIC_CGI_MAP`` (falls
+        back to entry.cgi v1). Attaches the session SID as ``_sid``.
         """
+        if not self._sid:
+            raise RuntimeError("Not logged in — use SynologyClient as an async context manager")
         client = self._client_or_raise()
         cgi_path, version = _STATIC_CGI_MAP.get(api, ("entry.cgi", 1))
 
@@ -145,7 +217,7 @@ class SynologyClient:
             "api": api,
             "version": version,
             "method": method,
-            "_sid": self._settings.api_token,  # CGI fallback for older APIs
+            "_sid": self._sid,
         }
         if extra:
             params.update(extra)
@@ -164,9 +236,9 @@ class SynologyClient:
 
         # HTTP-level errors
         if response.status_code == 401:
-            raise SynologyAPIError(401, "Unauthorized — check your Personal Access Token")
+            raise SynologyAPIError(401, "Unauthorized — session expired or invalid SID")
         if response.status_code == 403:
-            raise SynologyAPIError(403, "Forbidden — token lacks permission for this operation")
+            raise SynologyAPIError(403, "Forbidden — account lacks permission for this operation")
         if response.status_code == 404:
             raise SynologyAPIError(404, f"Not found: {cgi_path}?api={api}")
         if not response.is_success:

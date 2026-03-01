@@ -8,14 +8,12 @@
 #
 # Alternatively, provide values via env vars to skip interactive prompts:
 #   SYNOLOGY_URL=https://nas.local:5001 \
-#   SYNOLOGY_TOKEN='xxxxxxxxxx' \
+#   SYNOLOGY_USER=admin \
+#   SYNOLOGY_PASSWORD='s3cr3t' \
 #   ./scripts/setup_keychain.sh
 #
-# How to create a Personal Access Token (PAT) in DSM 7.2.2+:
-#   1. DSM → Control Panel → Personal → Security → Account
-#   2. Scroll to "Personal Access Tokens" → Add
-#   3. Give it a name (e.g. "mcp-server") and confirm
-#   4. Copy the token — it is shown only once!
+# Authentication uses SYNO.API.Auth session login (no Personal Access Token needed).
+# The credentials are stored in the macOS Keychain and never written to disk.
 # =============================================================================
 
 set -euo pipefail
@@ -42,25 +40,35 @@ else
     read -rp "Synology DSM URL (e.g. https://nas.local:5001): " NAS_URL
 fi
 
-# --- Personal Access Token ---
-# DSM 7.2.2+: Control Panel → Personal → Security → Account → Personal Access Tokens
-if [[ -n "${SYNOLOGY_TOKEN:-}" ]]; then
-    NAS_TOKEN="$SYNOLOGY_TOKEN"
+# --- Username ---
+if [[ -n "${SYNOLOGY_USER:-}" ]]; then
+    NAS_USER="$SYNOLOGY_USER"
 else
     echo ""
-    echo "Personal Access Token (DSM 7.2.2+):"
-    echo "  DSM → Control Panel → Personal → Security → Account → Personal Access Tokens → Add"
+    read -rp "DSM username (e.g. admin): " NAS_USER
+fi
+
+# --- Password ---
+if [[ -n "${SYNOLOGY_PASSWORD:-}" ]]; then
+    NAS_PASS="$SYNOLOGY_PASSWORD"
+else
     echo ""
-    read -rsp "Synology PAT (input hidden): " NAS_TOKEN
+    read -rsp "DSM password (input hidden): " NAS_PASS
     echo ""
 fi
 
 echo ""
 echo "Storing credentials…"
-store "synology-url"   "$NAS_URL"
-store "synology-token" "$NAS_TOKEN"
+store "synology-url"      "$NAS_URL"
+store "synology-username" "$NAS_USER"
+store "synology-password" "$NAS_PASS"
 
 echo ""
 echo "Done! To verify:"
 echo "  security find-generic-password -s '$SERVICE' -a 'synology-url' -w"
-echo "  security find-generic-password -s '$SERVICE' -a 'synology-token' -w"
+echo "  security find-generic-password -s '$SERVICE' -a 'synology-username' -w"
+echo ""
+echo "Note: Password is intentionally not shown. To remove all entries:"
+echo "  security delete-generic-password -s '$SERVICE' -a 'synology-url'"
+echo "  security delete-generic-password -s '$SERVICE' -a 'synology-username'"
+echo "  security delete-generic-password -s '$SERVICE' -a 'synology-password'"

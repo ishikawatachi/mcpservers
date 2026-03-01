@@ -2,17 +2,17 @@
 Configuration loading for Synology MCP.
 
 Priority order (highest → lowest):
-  1. Environment variables  (SYNOLOGY_TOKEN, SYNOLOGY_URL, …)
-  2. macOS Keychain          (synology-mcp / synology-token, synology-url)
+  1. Environment variables  (SYNOLOGY_USER, SYNOLOGY_PASSWORD, SYNOLOGY_URL, …)
+  2. macOS Keychain          (synology-mcp / synology-username, synology-password, synology-url)
   3. ~/.config/synology-mcp/config.yaml
 
 Authentication:
-  - DSM 7.2.2+ → Personal Access Token (PAT)
-      Create in DSM: Control Panel → Personal → Security → Account →
-                     Personal Access Tokens → Add
-      The PAT is sent as:
-        • Authorization: Bearer <token>   (WebAPI v7+ endpoints)
-        • _sid=<token> query parameter    (older CGI endpoints like Storage.CGI)
+  Session-based via SYNO.API.Auth (username + password).
+  The client calls the login endpoint on startup to obtain a session SID,
+  attaches _sid=<sid> to every request, and calls logout on shutdown.
+
+  DSM API Auth v7 endpoint: GET /webapi/entry.cgi?api=SYNO.API.Auth&version=7
+    &method=login&account=USER&passwd=PASS&format=sid
 
 Never write secrets back to any file from this module.
 """
@@ -32,7 +32,8 @@ log = structlog.get_logger(__name__)
 
 _CONFIG_FILE = Path.home() / ".config" / "synology-mcp" / "config.yaml"
 
-_KEYCHAIN_TOKEN_ACCOUNT = "synology-token"
+_KEYCHAIN_USERNAME_ACCOUNT = "synology-username"
+_KEYCHAIN_PASSWORD_ACCOUNT = "synology-password"
 _KEYCHAIN_URL_ACCOUNT = "synology-url"
 
 
@@ -42,18 +43,21 @@ class Settings:
     def __init__(
         self,
         synology_url: str,
-        api_token: str,
+        username: str,
+        password: str,
         ssl_verify: bool = True,
         timeout: float = 30.0,
     ) -> None:
         self.synology_url = synology_url.rstrip("/")
-        self.api_token = api_token          # Personal Access Token
+        self.username = username
+        self.password = password
         self.ssl_verify = ssl_verify
         self.timeout = timeout
 
     def __repr__(self) -> str:
         return (
             f"Settings(url={self.synology_url!r}, "
+            f"username={self.username!r}, "
             f"ssl_verify={self.ssl_verify}, timeout={self.timeout})"
         )
 
@@ -89,16 +93,29 @@ def get_settings() -> Settings:
             f"{_CONFIG_FILE}"
         )
 
-    # --- Personal Access Token ---
-    token: Optional[str] = (
-        os.environ.get("SYNOLOGY_TOKEN")
-        or retrieve_secret(_KEYCHAIN_TOKEN_ACCOUNT)
-        or yaml_cfg.get("synology_token")
+    # --- Username ---
+    username: Optional[str] = (
+        os.environ.get("SYNOLOGY_USER")
+        or retrieve_secret(_KEYCHAIN_USERNAME_ACCOUNT)
+        or yaml_cfg.get("synology_username")
     )
-    if not token:
+    if not username:
         raise RuntimeError(
-            "Synology PAT not found. Set SYNOLOGY_TOKEN env var, run "
-            "scripts/setup_keychain.sh, or add 'synology_token' to "
+            "Synology username not found. Set SYNOLOGY_USER env var, run "
+            "scripts/setup_keychain.sh, or add 'synology_username' to "
+            f"{_CONFIG_FILE}"
+        )
+
+    # --- Password ---
+    password: Optional[str] = (
+        os.environ.get("SYNOLOGY_PASSWORD")
+        or retrieve_secret(_KEYCHAIN_PASSWORD_ACCOUNT)
+        or yaml_cfg.get("synology_password")
+    )
+    if not password:
+        raise RuntimeError(
+            "Synology password not found. Set SYNOLOGY_PASSWORD env var, run "
+            "scripts/setup_keychain.sh, or add 'synology_password' to "
             f"{_CONFIG_FILE}"
         )
 
@@ -116,7 +133,8 @@ def get_settings() -> Settings:
 
     settings = Settings(
         synology_url=url,
-        api_token=token,
+        username=username,
+        password=password,
         ssl_verify=ssl_verify,
         timeout=timeout,
     )

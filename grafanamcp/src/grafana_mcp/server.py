@@ -224,12 +224,49 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     raise ValueError(f"Unknown tool: {name}")
 
 
+def _create_sse_app():
+    from mcp.server.sse import SseServerTransport
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.routing import Mount, Route
+
+    sse = SseServerTransport("/messages/")
+
+    async def handle_sse(request: Request) -> None:
+        async with sse.connect_sse(
+            request.scope, request.receive, request._send
+        ) as streams:
+            await app.run(streams[0], streams[1], app.create_initialization_options())
+
+    return Starlette(
+        routes=[
+            Route("/sse", endpoint=handle_sse),
+            Mount("/messages/", app=sse.handle_post_message),
+        ]
+    )
+
+
 def main() -> None:
+    import argparse
     cfg = get_settings()
     import structlog
     log = structlog.get_logger(__name__)
-    log.info("grafana_mcp.starting", url=cfg.grafana_url)
-    asyncio.run(mcp.server.stdio.stdio_server(app))
+
+    parser = argparse.ArgumentParser(description="Grafana MCP Server")
+    parser.add_argument("--transport", choices=["stdio", "sse"], default="stdio",
+                        help="Transport mode (default: stdio)")
+    parser.add_argument("--host", default="0.0.0.0", help="SSE host (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8003, help="SSE port (default: 8003)")
+    args = parser.parse_args()
+
+    if args.transport == "sse":
+        import uvicorn
+        log.info("grafana_mcp.starting", url=cfg.grafana_url, transport="sse",
+                 host=args.host, port=args.port)
+        uvicorn.run(_create_sse_app(), host=args.host, port=args.port)
+    else:
+        log.info("grafana_mcp.starting", url=cfg.grafana_url)
+        asyncio.run(mcp.server.stdio.stdio_server(app))
 
 
 if __name__ == "__main__":

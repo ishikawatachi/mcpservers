@@ -52,6 +52,38 @@ from proxmox_mcp.config import get_settings
 from proxmox_mcp.models import NodeInput, VmInput, ShutdownVmInput, StorageInput
 
 # ---------------------------------------------------------------------------
+# Dual-transport request parser (VSCode/Copilot ↔ Perplexity)
+# ---------------------------------------------------------------------------
+
+def parse_request(data: dict) -> tuple[str, dict]:
+    """Normalize two MCP payload formats into a (tool_name, args) pair.
+
+    VSCode / GitHub Copilot format::
+
+        {"command": "list_nodes", "args": {}}
+
+    Perplexity connector format::
+
+        {"name": "list_nodes", "tool_args": {"node": "bab1"}, "_requires_user_approval": false}
+
+        # or, without explicit name (tool name inferred from first key)
+        {"tool_args": {"health_check": {}}}
+
+    Raises:
+        ValueError: when neither recognised format is found.
+    """
+    if "command" in data:                           # VSCode / Copilot
+        return data["command"], data.get("args", {})
+    if "tool_args" in data:                         # Perplexity
+        tool_name = data.get("name") or (list(data["tool_args"].keys())[0] if data["tool_args"] else "")
+        if not tool_name:
+            raise ValueError("Perplexity request has empty 'tool_args' and no 'name'")
+        return tool_name, data["tool_args"]
+    raise ValueError(
+        "Invalid MCP format: expected 'command' key (VSCode) or 'tool_args' key (Perplexity)"
+    )
+
+# ---------------------------------------------------------------------------
 # Logging setup — structured JSON to stderr, never to stdout (MCP uses stdout)
 # ---------------------------------------------------------------------------
 
@@ -579,9 +611,80 @@ async def _serve() -> None:
         await app.run(read_stream, write_stream, app.create_initialization_options())
 
 
+def _create_sse_app() -> "Starlette":  # type: ignore[name-defined]
+    import json as _json
+    from mcp.server.sse import SseServerTransport
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse
+    from starlette.routing import Mount, Route
+    from pydantic import ValidationError as _ValidationError
+
+    sse = SseServerTransport("/messages/")
+
+    async def handle_sse(request: Request) -> None:
+        async with sse.connect_sse(
+            request.scope, request.receive, request._send  # type: ignore[attr-defined]
+        ) as streams:
+            await app.run(streams[0], streams[1], app.create_initialization_options())
+
+    async def handle_call(request: Request) -> JSONResponse:
+        """HTTP POST /call — accepts both VSCode and Perplexity MCP payload formats."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Request body must be valid JSON"}, status_code=400)
+
+        try:
+            tool_name, tool_args = parse_request(body)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+
+        try:
+            settings = get_settings()
+        except RuntimeError as exc:
+            return JSONResponse({"error": f"Configuration error: {exc}"}, status_code=500)
+
+        try:
+            async with ProxmoxClient(settings) as client:
+                results = await _dispatch(tool_name, tool_args, client)
+            return JSONResponse(_json.loads(results[0].text))
+        except ProxmoxAPIError as exc:
+            log.error("http.call.api_error", tool=tool_name, status=exc.status_code, error=str(exc))
+            return JSONResponse({"error": str(exc)}, status_code=502)
+        except _ValidationError as exc:
+            return JSONResponse({"error": f"Input validation error: {exc}"}, status_code=422)
+        except Exception as exc:
+            log.exception("http.call.unexpected_error", tool=tool_name)
+            return JSONResponse({"error": f"{type(exc).__name__}: {exc}"}, status_code=500)
+
+    return Starlette(
+        routes=[
+            Route("/sse", endpoint=handle_sse),
+            Route("/call", endpoint=handle_call, methods=["POST"]),
+            Mount("/messages/", app=sse.handle_post_message),
+        ]
+    )
+
+
 def main() -> None:
+    import argparse
     import asyncio
-    asyncio.run(_serve())
+
+    parser = argparse.ArgumentParser(description="Proxmox MCP Server")
+    parser.add_argument("--transport", choices=["stdio", "sse"], default="stdio",
+                        help="Transport mode (default: stdio)")
+    parser.add_argument("--host", default="0.0.0.0", help="SSE host (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8002, help="SSE port (default: 8002)")
+    args = parser.parse_args()
+
+    if args.transport == "sse":
+        import uvicorn
+        log.info("server.starting", name="proxmox-mcp", transport="sse",
+                 host=args.host, port=args.port)
+        uvicorn.run(_create_sse_app(), host=args.host, port=args.port)
+    else:
+        asyncio.run(_serve())
 
 
 if __name__ == "__main__":

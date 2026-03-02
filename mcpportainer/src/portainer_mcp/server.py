@@ -333,9 +333,46 @@ async def _serve() -> None:
         await app.run(read_stream, write_stream, app.create_initialization_options())
 
 
+def _create_sse_app() -> "Starlette":  # type: ignore[name-defined]
+    from mcp.server.sse import SseServerTransport
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.routing import Mount, Route
+
+    sse = SseServerTransport("/messages/")
+
+    async def handle_sse(request: Request) -> None:
+        async with sse.connect_sse(
+            request.scope, request.receive, request._send  # type: ignore[attr-defined]
+        ) as streams:
+            await app.run(streams[0], streams[1], app.create_initialization_options())
+
+    return Starlette(
+        routes=[
+            Route("/sse", endpoint=handle_sse),
+            Mount("/messages/", app=sse.handle_post_message),
+        ]
+    )
+
+
 def main() -> None:
+    import argparse
     import asyncio
-    asyncio.run(_serve())
+
+    parser = argparse.ArgumentParser(description="Portainer MCP Server")
+    parser.add_argument("--transport", choices=["stdio", "sse"], default="stdio",
+                        help="Transport mode (default: stdio)")
+    parser.add_argument("--host", default="0.0.0.0", help="SSE host (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8001, help="SSE port (default: 8001)")
+    args = parser.parse_args()
+
+    if args.transport == "sse":
+        import uvicorn
+        log.info("server.starting", name="portainer-mcp", transport="sse",
+                 host=args.host, port=args.port)
+        uvicorn.run(_create_sse_app(), host=args.host, port=args.port)
+    else:
+        asyncio.run(_serve())
 
 
 if __name__ == "__main__":

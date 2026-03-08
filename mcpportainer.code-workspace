@@ -1,0 +1,33 @@
+{
+	"folders": [
+		{
+			"path": "mcpportainer"
+		},
+		{
+			"path": "mcpproxmox"
+		},
+		{
+			"path": "grafanamcp"
+		},
+		{
+			"path": "authentikmcp"
+		},
+		{
+			"path": "mcpsynology"
+		}
+	],
+	"settings": {
+		"chat.tools.terminal.autoApprove": {
+			".venv/bin/pip": true,
+			".venv/bin/python": true,
+			"/^cd /Users/nicolas/Library/CloudStorage/ProtonDrive-serialinsert@proton\\.me/git/mcp/grafanamcp && source \\.venv/bin/activate && python -c \"\nimport asyncio\nfrom src\\.grafana_mcp\\.client import GrafanaClient\nfrom src\\.grafana_mcp\\.config import load_config\n\nasync def main\\(\\):\n    config = load_config\\(\\)\n    client = GrafanaClient\\(config\\)\n    result = await client\\.list_alerts\\(\\)\n    import json\n    print\\(json\\.dumps\\(result, indent=2\\)\\)\n\nasyncio\\.run\\(main\\(\\)\\)\n\"$/": {
+				"approve": true,
+				"matchCommandLine": true
+			},
+			"/^cd /Users/nicolas/Library/CloudStorage/ProtonDrive-serialinsert@proton\\.me/git/mcp/grafanamcp && source \\.venv/bin/activate && python -c \"\nimport asyncio, json, sys\nsys\\.path\\.insert\\(0, 'src'\\)\nfrom grafana_mcp\\.client import GrafanaClient\n\nasync def main\\(\\):\n    client = GrafanaClient\\(\\)\n    data = await client\\.get\\('v1/provisioning/alert-rules'\\)\n    print\\(json\\.dumps\\(data, indent=2\\)\\)\n\nasyncio\\.run\\(main\\(\\)\\)\n\"$/": {
+				"approve": true,
+				"matchCommandLine": true
+			}
+		}
+	}
+}

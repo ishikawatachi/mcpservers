@@ -1,0 +1,7 @@
+.vscodeignore
+node_modules/
+src/
+.vscode-test/
+out/maps/
+**/*.map
+**/*.ts

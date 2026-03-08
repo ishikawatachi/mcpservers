@@ -9,6 +9,21 @@
       "type": "stdio",
       "command": "/Users/nicolas/Library/CloudStorage/ProtonDrive-serialinsert@proton.me/git/mcp/mcpproxmox/.venv/bin/proxmox-mcp",
       "env": {}
+    },
+    "synology": {
+      "type": "stdio",
+      "command": "/Users/nicolas/Library/CloudStorage/ProtonDrive-serialinsert@proton.me/git/mcp/mcpsynology/.venv/bin/synology-mcp",
+      "env": {}
+    },
+    "authentik": {
+      "type": "stdio",
+      "command": "/Users/nicolas/Library/CloudStorage/ProtonDrive-serialinsert@proton.me/git/mcp/authentikmcp/.venv/bin/authentik-mcp",
+      "env": {}
+    },
+    "grafana": {
+      "type": "stdio",
+      "command": "/Users/nicolas/Library/CloudStorage/ProtonDrive-serialinsert@proton.me/git/mcp/grafanamcp/.venv/bin/grafana-mcp",
+      "env": {}
     }
   }
 }

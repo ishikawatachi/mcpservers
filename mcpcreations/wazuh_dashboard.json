@@ -1,0 +1,627 @@
+{
+  "uid": "wazuh-security-v1",
+  "title": "Wazuh — Security Operations",
+  "description": "Wazuh SIEM security event monitoring: alerts by severity, agent health, authentication analysis, CIS macOS benchmark compliance (SCA), and file integrity events.",
+  "tags": ["wazuh", "security", "siem", "cis", "mcp"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 0,
+  "refresh": "1m",
+  "time": {"from": "now-24h", "to": "now"},
+  "templating": {
+    "list": [
+      {
+        "name": "agent",
+        "label": "Agent",
+        "type": "query",
+        "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+        "query": {
+          "query": "*",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [
+            {
+              "type": "terms",
+              "field": "agent.name",
+              "id": "2",
+              "settings": {"size": "50", "order": "desc", "orderBy": "1"}
+            }
+          ]
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": "*",
+        "multi": false,
+        "hide": 0,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Alert Overview — Last 24 h",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 1},
+      "collapsed": false
+    },
+
+    {
+      "id": 2,
+      "title": "Total Alerts",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 1, "w": 4, "h": 4},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": []
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["sum"]},
+        "colorMode": "background",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "blue", "value": null}, {"color": "orange", "value": 500}, {"color": "red", "value": 1000}]
+          }
+        }
+      }
+    },
+
+    {
+      "id": 3,
+      "title": "Critical Alerts (level ≥ 12)",
+      "type": "stat",
+      "gridPos": {"x": 4, "y": 1, "w": 4, "h": 4},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.level:[12 TO 15] AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": []
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["sum"]},
+        "colorMode": "background"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]
+          }
+        }
+      }
+    },
+
+    {
+      "id": 4,
+      "title": "High Alerts (level 8–11)",
+      "type": "stat",
+      "gridPos": {"x": 8, "y": 1, "w": 4, "h": 4},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.level:[8 TO 11] AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": []
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["sum"]},
+        "colorMode": "background"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 5}, {"color": "red", "value": 20}]
+          }
+        }
+      }
+    },
+
+    {
+      "id": 5,
+      "title": "Auth Failures (last 24h)",
+      "type": "stat",
+      "gridPos": {"x": 12, "y": 1, "w": 4, "h": 4},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.groups:authentication_failed AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": []
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["sum"]},
+        "colorMode": "background"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 10}, {"color": "red", "value": 50}]
+          }
+        }
+      }
+    },
+
+    {
+      "id": 6,
+      "title": "FIM Events (file changes)",
+      "type": "stat",
+      "gridPos": {"x": 16, "y": 1, "w": 4, "h": 4},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.groups:syscheck AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": []
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["sum"]},
+        "colorMode": "background"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 20}]
+          }
+        }
+      }
+    },
+
+    {
+      "id": 7,
+      "title": "SCA Failures",
+      "type": "stat",
+      "gridPos": {"x": 20, "y": 1, "w": 4, "h": 4},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.groups:sca AND data.sca.result:failed AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": []
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["sum"]},
+        "colorMode": "background"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 5}, {"color": "red", "value": 20}]
+          }
+        }
+      }
+    },
+
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Alert Timeline",
+      "gridPos": {"x": 0, "y": 5, "w": 24, "h": 1},
+      "collapsed": false
+    },
+
+    {
+      "id": 11,
+      "title": "Alerts Over Time by Severity",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 6, "w": 24, "h": 8},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "alias": "Critical (≥12)",
+          "query": "rule.level:[12 TO 15] AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [{"type": "date_histogram", "field": "@timestamp", "id": "2", "settings": {"interval": "auto", "min_doc_count": 0}}]
+        },
+        {
+          "refId": "B",
+          "alias": "High (8-11)",
+          "query": "rule.level:[8 TO 11] AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [{"type": "date_histogram", "field": "@timestamp", "id": "2", "settings": {"interval": "auto", "min_doc_count": 0}}]
+        },
+        {
+          "refId": "C",
+          "alias": "Medium (4-7)",
+          "query": "rule.level:[4 TO 7] AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [{"type": "date_histogram", "field": "@timestamp", "id": "2", "settings": {"interval": "auto", "min_doc_count": 0}}]
+        }
+      ],
+      "options": {
+        "legend": {"calcs": ["sum", "max"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "fieldConfig": {
+        "defaults": {"custom": {"fillOpacity": 15, "lineWidth": 2}},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Critical (≥12)"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "High (8-11)"}, "properties": [{"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Medium (4-7)"}, "properties": [{"id": "color", "value": {"fixedColor": "yellow", "mode": "fixed"}}]}
+        ]
+      }
+    },
+
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Top Alerts & Agents",
+      "gridPos": {"x": 0, "y": 14, "w": 24, "h": 1},
+      "collapsed": false
+    },
+
+    {
+      "id": 21,
+      "title": "Top 10 Alert Rules",
+      "type": "table",
+      "gridPos": {"x": 0, "y": 15, "w": 12, "h": 8},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [
+            {
+              "type": "terms",
+              "field": "rule.description.keyword",
+              "id": "2",
+              "settings": {"size": "10", "order": "desc", "orderBy": "1", "min_doc_count": "1"}
+            }
+          ]
+        }
+      ],
+      "options": {"sortBy": [{"displayName": "Count", "desc": true}]},
+      "fieldConfig": {
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "rule.description.keyword"}, "properties": [{"id": "displayName", "value": "Rule Description"}]},
+          {"matcher": {"id": "byName", "options": "Count"}, "properties": [{"id": "custom.width", "value": 80}]}
+        ]
+      }
+    },
+
+    {
+      "id": 22,
+      "title": "Top Agents by Alert Count",
+      "type": "table",
+      "gridPos": {"x": 12, "y": 15, "w": 12, "h": 8},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [
+            {
+              "type": "terms",
+              "field": "agent.name.keyword",
+              "id": "2",
+              "settings": {"size": "10", "order": "desc", "orderBy": "1"}
+            }
+          ]
+        }
+      ],
+      "options": {"sortBy": [{"displayName": "Count", "desc": true}]},
+      "fieldConfig": {
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "agent.name.keyword"}, "properties": [{"id": "displayName", "value": "Agent"}]},
+          {"matcher": {"id": "byName", "options": "Count"}, "properties": [{"id": "custom.width", "value": 80}]}
+        ]
+      }
+    },
+
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Authentication & Root Access",
+      "gridPos": {"x": 0, "y": 23, "w": 24, "h": 1},
+      "collapsed": false
+    },
+
+    {
+      "id": 31,
+      "title": "Authentication Failures Timeline",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 24, "w": 16, "h": 7},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "alias": "Failed logins",
+          "query": "rule.groups:authentication_failed AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [{"type": "date_histogram", "field": "@timestamp", "id": "2", "settings": {"interval": "auto"}}]
+        },
+        {
+          "refId": "B",
+          "alias": "Root commands",
+          "query": "rule.groups:rootcheck AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [{"type": "date_histogram", "field": "@timestamp", "id": "2", "settings": {"interval": "auto"}}]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"custom": {"fillOpacity": 10}},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Failed logins"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Root commands"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]}
+        ]
+      }
+    },
+
+    {
+      "id": 32,
+      "title": "Top Source IPs (Auth Failures)",
+      "type": "table",
+      "gridPos": {"x": 16, "y": 24, "w": 8, "h": 7},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.groups:authentication_failed AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [
+            {
+              "type": "terms",
+              "field": "data.srcip.keyword",
+              "id": "2",
+              "settings": {"size": "10", "order": "desc", "orderBy": "1"}
+            }
+          ]
+        }
+      ],
+      "options": {"sortBy": [{"displayName": "Count", "desc": true}]},
+      "fieldConfig": {
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "data.srcip.keyword"}, "properties": [{"id": "displayName", "value": "Source IP"}]}
+        ]
+      }
+    },
+
+    {
+      "id": 40,
+      "type": "row",
+      "title": "CIS macOS Benchmark (SCA)",
+      "gridPos": {"x": 0, "y": 31, "w": 24, "h": 1},
+      "collapsed": false
+    },
+
+    {
+      "id": 41,
+      "title": "ℹ️  CIS macOS Benchmark — Setup Note",
+      "type": "text",
+      "gridPos": {"x": 0, "y": 32, "w": 8, "h": 5},
+      "options": {
+        "mode": "markdown",
+        "content": "## CIS Apple macOS Benchmark\n\nWazuh evaluates macOS agents against the CIS benchmark via **Security Configuration Assessment (SCA)**.\n\n**Enable on macOS agent** (`/Library/Ossec/etc/ossec.conf`):\n```xml\n<sca>\n  <enabled>yes</enabled>\n  <interval>12h</interval>\n  <policies>\n    <policy>cis_apple_macOS_13.0.yml</policy>\n  </policies>\n</sca>\n```\nSCA results update every 12 h. Panels below require `data.sca.*` fields in Wazuh alerts index."
+      }
+    },
+
+    {
+      "id": 42,
+      "title": "macOS CIS — Failed Checks",
+      "type": "stat",
+      "gridPos": {"x": 8, "y": 32, "w": 4, "h": 5},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.groups:sca AND data.sca.result:failed AND data.sca.policy_id:cis_apple*",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": []
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["sum"]}, "colorMode": "background"},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 5}, {"color": "red", "value": 15}]
+          }
+        }
+      }
+    },
+
+    {
+      "id": 43,
+      "title": "macOS CIS — Passed Checks",
+      "type": "stat",
+      "gridPos": {"x": 12, "y": 32, "w": 4, "h": 5},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.groups:sca AND data.sca.result:passed AND data.sca.policy_id:cis_apple*",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": []
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["sum"]}, "colorMode": "background"},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "red", "value": null}, {"color": "green", "value": 50}]
+          }
+        }
+      }
+    },
+
+    {
+      "id": 44,
+      "title": "CIS Failed Checks per Agent",
+      "type": "table",
+      "gridPos": {"x": 16, "y": 32, "w": 8, "h": 5},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.groups:sca AND data.sca.result:failed AND data.sca.policy_id:cis_apple*",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [
+            {
+              "type": "terms",
+              "field": "agent.name.keyword",
+              "id": "2",
+              "settings": {"size": "10", "order": "desc", "orderBy": "1"}
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "agent.name.keyword"}, "properties": [{"id": "displayName", "value": "Agent (macOS host)"}]}
+        ]
+      }
+    },
+
+    {
+      "id": 45,
+      "title": "CIS Failed Check Descriptions",
+      "type": "table",
+      "gridPos": {"x": 0, "y": 37, "w": 24, "h": 8},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.groups:sca AND data.sca.result:failed AND data.sca.policy_id:cis_apple* AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [
+            {
+              "type": "terms",
+              "field": "data.sca.check.title.keyword",
+              "id": "2",
+              "settings": {"size": "20", "order": "desc", "orderBy": "1"}
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "data.sca.check.title.keyword"}, "properties": [{"id": "displayName", "value": "CIS Check"}]},
+          {"matcher": {"id": "byName", "options": "Count"}, "properties": [{"id": "custom.width", "value": 60}]}
+        ]
+      }
+    },
+
+    {
+      "id": 50,
+      "type": "row",
+      "title": "File Integrity Monitoring (FIM)",
+      "gridPos": {"x": 0, "y": 45, "w": 24, "h": 1},
+      "collapsed": false
+    },
+
+    {
+      "id": 51,
+      "title": "FIM Events Timeline",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 46, "w": 16, "h": 7},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "alias": "File Added",
+          "query": "rule.groups:syscheck AND syscheck.event:added AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [{"type": "date_histogram", "field": "@timestamp", "id": "2", "settings": {"interval": "auto"}}]
+        },
+        {
+          "refId": "B",
+          "alias": "File Modified",
+          "query": "rule.groups:syscheck AND syscheck.event:modified AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [{"type": "date_histogram", "field": "@timestamp", "id": "2", "settings": {"interval": "auto"}}]
+        },
+        {
+          "refId": "C",
+          "alias": "File Deleted",
+          "query": "rule.groups:syscheck AND syscheck.event:deleted AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [{"type": "date_histogram", "field": "@timestamp", "id": "2", "settings": {"interval": "auto"}}]
+        }
+      ],
+      "fieldConfig": {
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "File Added"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "File Modified"}, "properties": [{"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "File Deleted"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]}
+        ]
+      }
+    },
+
+    {
+      "id": 52,
+      "title": "Recently Changed Files",
+      "type": "table",
+      "gridPos": {"x": 16, "y": 46, "w": 8, "h": 7},
+      "datasource": {"type": "elasticsearch", "uid": "${DS_WAZUH_INDEXER}"},
+      "targets": [
+        {
+          "refId": "A",
+          "query": "rule.groups:syscheck AND agent.name:$agent",
+          "timeField": "@timestamp",
+          "metrics": [{"type": "count", "id": "1"}],
+          "bucketAggs": [
+            {
+              "type": "terms",
+              "field": "syscheck.path.keyword",
+              "id": "2",
+              "settings": {"size": "10", "order": "desc", "orderBy": "1"}
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "syscheck.path.keyword"}, "properties": [{"id": "displayName", "value": "File Path"}]}
+        ]
+      }
+    }
+  ]
+}

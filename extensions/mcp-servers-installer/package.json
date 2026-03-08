@@ -1,0 +1,98 @@
+{
+  "name": "mcp-servers-installer",
+  "displayName": "MCP Servers Installer",
+  "description": "Auto-installs and configures the portainer, proxmox, synology, authentik and grafana MCP servers for GitHub Copilot Chat.",
+  "version": "0.1.0",
+  "publisher": "nicolas",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "mcp",
+    "copilot",
+    "portainer",
+    "proxmox",
+    "synology",
+    "authentik",
+    "grafana"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicolas/mcp-servers-installer"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mcpServers.install",
+        "title": "MCP: Install & Configure All MCP Servers",
+        "category": "MCP Servers"
+      },
+      {
+        "command": "mcpServers.configure",
+        "title": "MCP: Write mcp.json for Current Workspace",
+        "category": "MCP Servers"
+      },
+      {
+        "command": "mcpServers.startGateway",
+        "title": "MCP: Start HTTP Gateway (external access)",
+        "category": "MCP Servers"
+      },
+      {
+        "command": "mcpServers.stopGateway",
+        "title": "MCP: Stop HTTP Gateway",
+        "category": "MCP Servers"
+      },
+      {
+        "command": "mcpServers.showStatus",
+        "title": "MCP: Show Server Status",
+        "category": "MCP Servers"
+      }
+    ],
+    "configuration": {
+      "title": "MCP Servers Installer",
+      "properties": {
+        "mcpServers.repoRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the git/mcp repository root. Leave empty to auto-detect."
+        },
+        "mcpServers.enabledServers": {
+          "type": "array",
+          "default": ["portainer", "proxmox", "synology", "authentik", "grafana"],
+          "description": "Which MCP servers to configure in mcp.json",
+          "items": {
+            "type": "string",
+            "enum": ["portainer", "proxmox", "synology", "authentik", "grafana"]
+          }
+        },
+        "mcpServers.gatewayEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Start the HTTP gateway on extension activation (for external access)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.96.0",
+    "typescript": "^5.4.0",
+    "@vscode/vsce": "^3.0.0",
+    "eslint": "^9.0.0"
+  }
+}

@@ -1,0 +1,15 @@
+# Wazuh certs generator config
+# Used by the wazuh.certgen one-shot service (docker compose --profile certgen up)
+nodes:
+  indexer:
+    - name: wazuh.indexer
+      ip:
+        - "127.0.0.1"
+  server:
+    - name: wazuh.manager
+      ip:
+        - "127.0.0.1"
+  dashboard:
+    - name: wazuh.dashboard
+      ip:
+        - "127.0.0.1"

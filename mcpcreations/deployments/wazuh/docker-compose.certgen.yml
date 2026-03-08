@@ -1,0 +1,38 @@
+# Wazuh Certificate Generator -- run ONCE before deploying the main stack
+#
+# Generates TLS certificates into /volume1/docker/wazuh/certs/ on the Synology.
+# The node config is written inline by the entrypoint -- no file upload needed.
+#
+# Steps:
+#   1. Deploy THIS compose as a Portainer stack named "wazuh-certgen".
+#   2. Wait for wazuh-certgen container to reach status "exited" (exit 0).
+#   3. Delete this stack from Portainer.
+#   4. Deploy the main docker-compose.yml as the "wazuh" stack.
+
+services:
+  wazuh-certs-generator:
+    image: wazuh/wazuh-certs-generator:0.0.2
+    container_name: wazuh-certgen
+    volumes:
+      - /volume1/docker/wazuh/certs:/certificates
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        mkdir -p /config
+        cat > /config/certs.yml << 'CERTEOF'
+        nodes:
+          indexer:
+            - name: wazuh.indexer
+              ip:
+                - "127.0.0.1"
+          server:
+            - name: wazuh.manager
+              ip:
+                - "127.0.0.1"
+          dashboard:
+            - name: wazuh.dashboard
+              ip:
+                - "127.0.0.1"
+        CERTEOF
+        /entrypoint.sh

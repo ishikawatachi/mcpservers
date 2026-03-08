@@ -1,71 +1,55 @@
-# Wazuh Single-Node Docker Compose
-# Designed for deployment via Portainer + Synology reverse proxy
+# Wazuh Single-Node -- Synology / Portainer deployment
 #
-# Required environment variables (set in .env or via Portainer stack env):
-#   WAZUH_HOSTNAME          — hostname served by Synology reverse proxy (e.g. wazuh.local.yourdomain.com)
-#   INDEXER_PASSWORD        — password for wazuh/kibanaserver indexer accounts
-#   DASHBOARD_PASSWORD      — password for the dashboard admin account
+# Env vars (set in Portainer stack -> Environment):
+#   WAZUH_HOSTNAME     -- reverse-proxy hostname (wazuh.local.defaultvaluation.com)
+#   INDEXER_PASSWORD   -- password for admin + kibanaserver OpenSearch accounts
+#   DASHBOARD_PASSWORD -- password for the wazuh-wui dashboard API user
 #
-# Network:
-#   Attaches to the shared 'proxy' external network so Synology's reverse
-#   proxy can reach the dashboard container at wazuh.local.yourdomain.com
+# Host volumes (pre-created on Synology):
+#   /volume1/docker/wazuh/wazuh-indexer   -- OpenSearch data
+#   /volume1/docker/wazuh/certs           -- shared TLS certs (certgen step)
+#   /volume1/docker/wazuh/wazuh-dashboard -- dashboard config/state
+#   /volume1/docker/wazuh/wazuh-manager   -- manager data (/var/ossec)
 #
-# Watchdog:
-#   Watchtower is included to auto-update Wazuh images (weekly schedule)
+# Networks:
+#   wazuh_net     -- internal bridge, inter-service only
+#   bridge_docker -- external (NPM reverse proxy lives here)
 #
-# Ports exposed on the Docker host (for Wazuh agents on other hosts):
-#   1514/udp  — syslog / events from agents
-#   1515/tcp  — agent enrollment
-#   55000/tcp — Wazuh API (internal, restricted by firewall)
+# Watchtower already runs globally on this host -- NOT included.
+# Run docker-compose.certgen.yml ONCE first to populate certs.
 
 services:
 
-  # ── Wazuh Indexer (OpenSearch) ─────────────────────────────────────────────
   wazuh.indexer:
     image: wazuh/wazuh-indexer:4.9.2
     container_name: wazuh-indexer
     hostname: wazuh.indexer
     restart: unless-stopped
     environment:
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - node.name=wazuh.indexer
-      - cluster.initial_cluster_manager_nodes=wazuh.indexer
-      - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - plugins.security.ssl.http.pemcert_filepath=/usr/share/wazuh-indexer/certs/wazuh.indexer.pem
-      - plugins.security.ssl.http.pemkey_filepath=/usr/share/wazuh-indexer/certs/wazuh.indexer-key.pem
-      - plugins.security.ssl.http.pemtrustedcas_filepath=/usr/share/wazuh-indexer/certs/root-ca.pem
-      - plugins.security.ssl.transport.pemcert_filepath=/usr/share/wazuh-indexer/certs/wazuh.indexer.pem
-      - plugins.security.ssl.transport.pemkey_filepath=/usr/share/wazuh-indexer/certs/wazuh.indexer-key.pem
-      - plugins.security.ssl.transport.pemtrustedcas_filepath=/usr/share/wazuh-indexer/certs/root-ca.pem
-      - plugins.security.ssl.http.enabled=true
-      - plugins.security.ssl.transport.enforce_hostname_verification=false
-      - plugins.security.ssl.transport.resolve_hostname=false
-      - plugins.security.authcz.admin_dn=CN=admin,OU=Wazuh,O=Wazuh,L=California,C=US
-      - plugins.security.check_snapshot_restore_write_privilege=true
-      - plugins.security.enable_snapshot_restore_privilege=true
-      - plugins.security.nodes_dn=CN=wazuh.indexer,OU=Wazuh,O=Wazuh,L=California,C=US
-      - plugins.security.restapi.roles_enabled=["all_access","security_rest_api_access"]
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=512m"
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=${INDEXER_PASSWORD}
     ulimits:
-      memlock:
-        soft: -1
-        hard: -1
       nofile:
         soft: 65536
         hard: 65536
     volumes:
-      - wazuh-indexer-data:/var/lib/wazuh-indexer
-      - wazuh-indexer-certs:/usr/share/wazuh-indexer/certs
+      - /volume1/docker/wazuh/wazuh-indexer:/var/lib/wazuh-indexer
+      # Custom opensearch.yml: cert paths at /usr/share/wazuh-indexer/certs/
+      # (JVM SecurityManager only allows reads within /usr/share/wazuh-indexer/)
+      - /volume1/docker/wazuh/wazuh-indexer/opensearch.yml:/usr/share/wazuh-indexer/opensearch.yml:ro
+      # Certs mounted at the JVM-allowed path (NOT /etc/wazuh-indexer/certs/)
+      - /volume1/docker/wazuh/certs:/usr/share/wazuh-indexer/certs:ro
     networks:
-      - wazuh-internal
+      - wazuh_net
     healthcheck:
-      test: ["CMD-SHELL", "curl -sk --fail https://localhost:9200/_cluster/health || exit 1"]
+      # Use credentials — without auth the endpoint returns 401 (curl --fail exits non-zero)
+      test: ["CMD-SHELL", "curl -sk --fail -u admin:${INDEXER_PASSWORD} https://localhost:9200/_cluster/health | grep -q green || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 10
+      start_period: 120s
 
-  # ── Wazuh Manager ──────────────────────────────────────────────────────────
   wazuh.manager:
     image: wazuh/wazuh-manager:4.9.2
     container_name: wazuh-manager
@@ -73,43 +57,36 @@ services:
     restart: unless-stopped
     depends_on:
       wazuh.indexer:
-        condition: service_healthy
+        condition: service_started
     environment:
       - INDEXER_URL=https://wazuh.indexer:9200
       - INDEXER_USERNAME=admin
       - INDEXER_PASSWORD=${INDEXER_PASSWORD}
       - FILEBEAT_SSL_VERIFICATION_MODE=none
       - SSL_CERTIFICATE_AUTHORITIES=/etc/ssl/root-ca.pem
-      - SSL_CERTIFICATE=/etc/ssl/filebeat.pem
-      - SSL_KEY=/etc/ssl/filebeat.key
+      - SSL_CERTIFICATE=/etc/ssl/wazuh.manager.pem
+      - SSL_KEY=/etc/ssl/wazuh.manager-key.pem
       - API_USERNAME=wazuh-wui
       - API_PASSWORD=${DASHBOARD_PASSWORD}
     volumes:
-      - wazuh-manager-api:/var/ossec/api/configuration
-      - wazuh-manager-etc:/var/ossec/etc
-      - wazuh-manager-logs:/var/ossec/logs
-      - wazuh-manager-queue:/var/ossec/queue
-      - wazuh-manager-var:/var/ossec/var
-      - wazuh-manager-integrations:/var/ossec/integrations
-      - wazuh-manager-active-response:/var/ossec/active-response/bin
-      - wazuh-manager-agentless:/var/ossec/agentless
-      - wazuh-manager-wodles:/var/ossec/wodles
-      - wazuh-indexer-certs:/etc/ssl
+      - /volume1/docker/wazuh/wazuh-manager:/var/ossec
+      - /volume1/docker/wazuh/certs:/etc/ssl:ro
+      # Persist filebeat.yml across container recreations (init script restores from data_tmp if missing)
+      # data_tmp at /var/ossec/data_tmp/permanent/etc/filebeat/ serves as the restore source
     ports:
-      - "1514:1514/udp"   # agent syslog
-      - "1515:1515"       # agent enrollment
-      - "55000:55000"     # Wazuh API (restrict via firewall)
+      - "1514:1514/udp"
+      - "1515:1515"
+      - "55000:55000"
     networks:
-      - wazuh-internal
-      - proxy
+      - wazuh_net
     healthcheck:
-      test: ["CMD-SHELL", "curl -sk --fail https://localhost:55000/ || exit 1"]
+      # Wazuh API always returns 401 without a token; accept any 2xx or 4xx as "up"
+      test: ["CMD-SHELL", "curl -sk -o /dev/null -w '%{http_code}' https://localhost:55000/ | grep -qE '^[24]' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 10
-      start_period: 90s
+      start_period: 120s
 
-  # ── Wazuh Dashboard ────────────────────────────────────────────────────────
   wazuh.dashboard:
     image: wazuh/wazuh-dashboard:4.9.2
     container_name: wazuh-dashboard
@@ -117,7 +94,7 @@ services:
     restart: unless-stopped
     depends_on:
       wazuh.manager:
-        condition: service_healthy
+        condition: service_started
     environment:
       - INDEXER_USERNAME=kibanaserver
       - INDEXER_PASSWORD=${INDEXER_PASSWORD}
@@ -126,22 +103,21 @@ services:
       - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
       - API_USERNAME=wazuh-wui
       - API_PASSWORD=${DASHBOARD_PASSWORD}
-      # Synology reverse proxy terminates HTTPS — dashboard listens on plain HTTP
       - SERVER_SSL_ENABLED=false
       - VIRTUAL_HOST=${WAZUH_HOSTNAME}
     volumes:
-      - wazuh-dashboard-config:/usr/share/wazuh-dashboard/data/wazuh/config
-      - wazuh-dashboard-custom:/usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
-      - wazuh-indexer-certs:/usr/share/wazuh-dashboard/certs
+      - /volume1/docker/wazuh/wazuh-dashboard:/usr/share/wazuh-dashboard/data
+      # Dashboard certs at the path its default config expects
+      - /volume1/docker/wazuh/certs:/etc/wazuh-dashboard/certs:ro
+      # Custom config: port 5601, SSL disabled (NPM handles external TLS)
+      - /volume1/docker/wazuh/wazuh-dashboard/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+      # Pin wazuh.yml read-only so wazuh_app_config.sh cannot append duplicate hosts: blocks on restart
+      - /volume1/docker/wazuh/wazuh-dashboard/wazuh/config/wazuh.yml:/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml:ro
     expose:
       - "5601"
     networks:
-      - wazuh-internal
-      - proxy
-    labels:
-      # If you use Traefik on the proxy network, these labels auto-route traffic.
-      # Remove if you configure Synology DSM Reverse Proxy manually.
-      - "traefik.enable=false"
+      - wazuh_net
+      - bridge_docker
     healthcheck:
       test: ["CMD-SHELL", "curl -sk --fail http://localhost:5601/ || exit 1"]
       interval: 30s
@@ -149,50 +125,8 @@ services:
       retries: 10
       start_period: 120s
 
-  # ── Certgen (one-shot) ──────────────────────────────────────────────────────
-  # Generates self-signed certs for inter-service TLS. Runs once and exits.
-  wazuh.certgen:
-    image: wazuh/wazuh-certs-generator:0.0.2
-    container_name: wazuh-certgen
-    hostname: wazuh.certgen
-    profiles: ["certgen"]     # only run when explicitly invoked
-    volumes:
-      - wazuh-indexer-certs:/certificates
-      - ./config.yml:/config/certs.yml:ro
-
-  # ── Watchtower (auto-update watchdog) ──────────────────────────────────────
-  watchtower:
-    image: containrrr/watchtower:latest
-    container_name: watchtower-wazuh
-    restart: unless-stopped
-    environment:
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=604800    # 7 days in seconds
-      - WATCHTOWER_LABEL_ENABLE=false
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - wazuh-internal
-    command: wazuh-manager wazuh-indexer wazuh-dashboard
-
-volumes:
-  wazuh-indexer-data:
-  wazuh-indexer-certs:
-  wazuh-manager-api:
-  wazuh-manager-etc:
-  wazuh-manager-logs:
-  wazuh-manager-queue:
-  wazuh-manager-var:
-  wazuh-manager-integrations:
-  wazuh-manager-active-response:
-  wazuh-manager-agentless:
-  wazuh-manager-wodles:
-  wazuh-dashboard-config:
-  wazuh-dashboard-custom:
-
 networks:
-  wazuh-internal:
+  wazuh_net:
     driver: bridge
-    internal: true       # no direct internet access; only inter-service
-  proxy:
-    external: true       # shared network with Synology reverse proxy / Traefik
+  bridge_docker:
+    external: true

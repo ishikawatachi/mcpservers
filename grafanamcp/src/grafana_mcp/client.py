@@ -47,9 +47,24 @@ class GrafanaClient:
         r.raise_for_status()
         return r.json()
 
+    async def patch(self, path: str, body: dict) -> dict:
+        url = f"{self._base}/api/{path.lstrip('/')}"
+        headers = {**self._headers, "Content-Type": "application/json"}
+        async with httpx.AsyncClient(verify=self._verify, timeout=self._timeout) as c:
+            r = await c.patch(url, headers=headers, json=body)
+        r.raise_for_status()
+        if not r.content:
+            return {}
+        return r.json()
+
     async def delete(self, path: str) -> dict:
         url = f"{self._base}/api/{path.lstrip('/')}"
         async with httpx.AsyncClient(verify=self._verify, timeout=self._timeout) as c:
             r = await c.delete(url, headers=self._headers)
         r.raise_for_status()
-        return r.json()
+        if not r.content or r.status_code == 204:
+            return {"status": "deleted"}
+        try:
+            return r.json()
+        except Exception:
+            return {"status": "deleted", "message": r.text}

@@ -116,6 +116,16 @@ scrape_configs:
         replacement: "172.22.0.1:9221"
 
   # ─────────────────────────────────────────────────────────────────
+  # Jellyfin VPN Monitor (python exporter in gluetun network namespace)
+  # Port 9101 is published to the NAS host; 172.22.0.1 = prometheus_net gateway
+  # ─────────────────────────────────────────────────────────────────
+  - job_name: "jellyfin_vpn"
+    static_configs:
+      - targets: ["172.22.0.1:9101"]
+        labels:
+          instance: "jellyfin-gluetun"
+
+  # ─────────────────────────────────────────────────────────────────
   # Portainer — REMOVED
   # Portainer EE /metrics is Kubernetes-only; not available for
   # Docker mode. Removing this job eliminates the permanent
